@@ -330,7 +330,7 @@ end
 
 local function Build()
   local frame = CreateFrame("Frame", "LeywordFrame", UIParent, "BasicFrameTemplateWithInset")
-  frame:SetSize(440, 600)
+  frame:SetSize(470, 700)
   frame:SetFrameStrata("MEDIUM")
   frame:SetClampedToScreen(true)
   frame:SetMovable(true)
@@ -357,19 +357,19 @@ local function Build()
   end
   AddEscape("LeywordFrame")
   local anchor = frame.Inset or frame
-  local puzzleTab = CreateFrame("Button", "LeywordPuzzleTab", anchor, "UIPanelButtonTemplate")
+  local puzzleTab = CreateFrame("Button", "LeywordPuzzleTab", frame, "UIPanelButtonTemplate")
   puzzleTab:SetSize(90, 22)
-  puzzleTab:SetPoint("TOPLEFT", anchor, "TOPLEFT", 12, -8)
+  puzzleTab:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -36)
   puzzleTab:SetText("Puzzle")
-  local guildTab = CreateFrame("Button", "LeywordGuildTab", anchor, "UIPanelButtonTemplate")
+  local guildTab = CreateFrame("Button", "LeywordGuildTab", frame, "UIPanelButtonTemplate")
   guildTab:SetSize(90, 22)
   guildTab:SetPoint("LEFT", puzzleTab, "RIGHT", 6, 0)
   guildTab:SetText("Guild")
 
-  local board = CreateFrame("Frame", nil, anchor)
-  board:SetPoint("TOPLEFT", anchor, "TOPLEFT", 12, -36)
-  board:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -10, 10)
-  local guild = CreateFrame("Frame", nil, anchor)
+  local board = CreateFrame("Frame", nil, frame)
+  board:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -64)
+  board:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 12)
+  local guild = CreateFrame("Frame", nil, frame)
   guild:SetPoint("TOPLEFT", board, "TOPLEFT")
   guild:SetPoint("BOTTOMRIGHT", board, "BOTTOMRIGHT")
   guild:Hide()
@@ -381,29 +381,32 @@ local function Build()
     tiles[row] = {}
     for col = 1, 5 do
       local tile = CreateFrame("Frame", "LeywordTile_" .. row .. "_" .. col, board, "BackdropTemplate")
-      tile:SetSize(36, 36)
-      tile:SetPoint("TOPLEFT", board, "TOP", -98 + (col - 1) * 40, -26 - (row - 1) * 40)
+      tile:SetSize(56, 56)
+      tile:SetPoint("TOPLEFT", board, "TOP", -156 + (col - 1) * 64, -28 - (row - 1) * 64)
       tile:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8X8",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         edgeSize = 10,
         insets = { left = 2, right = 2, top = 2, bottom = 2 },
       })
-      tile.letter = tile:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+      tile.letter = tile:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
       tile.letter:SetPoint("CENTER", 0, 1)
+      if not tile.letter:SetFont("Fonts\\FRIZQT__.TTF", 28, "") then
+        tile.letter:SetFont("Fonts\\FRIZQT__.ttf", 28, "")
+      end
       tiles[row][col] = tile
     end
   end
 
   local status = board:CreateFontString(nil, "OVERLAY", "GameFontRed")
-  status:SetPoint("TOP", board, "TOP", 0, -272)
+  status:SetPoint("TOP", board, "TOP", 0, -416)
   status:SetWidth(320)
   local result = board:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   result:SetPoint("TOP", status, "BOTTOM", 0, -1)
 
   local box = CreateFrame("EditBox", "LeywordGuessBox", board, "InputBoxTemplate")
   box:SetSize(110, 22)
-  box:SetPoint("TOP", board, "TOP", -96, -296)
+  box:SetPoint("TOP", board, "TOP", -96, -442)
   box:SetAutoFocus(false)
   box:SetMaxLetters(5)
   box:SetFontObject(GameFontHighlight)
@@ -469,7 +472,7 @@ local function Build()
 
   local keys = {}
   local keyRows = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" }
-  local keyY = { -328, -352, -376 }
+  local keyY = { -474, -500, -526 }
   for r = 1, #keyRows do
     local letters = keyRows[r]
     local width = #letters * 26 + (#letters - 1) * 3
@@ -497,7 +500,7 @@ local function Build()
   end
 
   local hardMode = CreateFrame("CheckButton", "LeywordHardModeCheck", board, "UICheckButtonTemplate")
-  hardMode:SetPoint("TOPLEFT", board, "TOPLEFT", 48, -406)
+  hardMode:SetPoint("TOPLEFT", board, "TOPLEFT", 48, -560)
   CheckText(hardMode, "Hard mode")
   local colorblind = CreateFrame("CheckButton", "LeywordColorblindCheck", board, "UICheckButtonTemplate")
   colorblind:SetPoint("LEFT", hardMode, "RIGHT", 110, 0)
