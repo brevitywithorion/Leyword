@@ -20,10 +20,6 @@ function Leyword.Palette()
   return Leyword.Colors.normal
 end
 
-local function Hex(c)
-  return string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
-end
-
 function Leyword.ApplyTile(tile, letter, mark)
   tile.letter:SetText(letter or "")
   local color = mark and Leyword.Palette()[mark]
@@ -118,50 +114,21 @@ function Leyword.ShareLines()
     return nil
   end
   local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
-  local pal = Leyword.Palette()
-  local lines = { string.format("Leyword %d %d/6", number, #cur.guesses) }
-  local chunk = {}
+  local rows = {}
   for i = 1, #cur.states do
-    local bits = {}
-    for p = 1, 5 do
-      local mark = cur.states[i]:sub(p, p)
-      bits[p] = "|cff" .. Hex(pal[mark]) .. mark .. "|r"
-    end
-    chunk[#chunk + 1] = table.concat(bits)
-    if #chunk == 3 or i == #cur.states then
-      lines[#lines + 1] = table.concat(chunk, " ")
-      chunk = {}
-    end
+    rows[i] = (cur.states[i] or ""):gsub("[^GYB]", "")
   end
-  lines[#lines + 1] = "Don't have Leyword? Install the addon to play today's word."
-  return lines
-end
-
-local shareQueue = {}
-local sharePumping = false
-
-local function PumpShare()
-  sharePumping = false
-  local item = table.remove(shareQueue, 1)
-  if not item then
-    return
-  end
-  SendChatMessage(item.text, item.kind, nil, item.target)
-  if #shareQueue > 0 and C_Timer and C_Timer.After then
-    sharePumping = true
-    C_Timer.After(0.35, PumpShare)
-  else
-    for i = 1, #shareQueue do
-      local nextItem = shareQueue[i]
-      SendChatMessage(nextItem.text, nextItem.kind, nil, nextItem.target)
-    end
-    wipe(shareQueue)
-  end
+  return string.format(
+    "Leyword %d %d/6 %s. Don't have Leyword? Install the addon to play today's word.",
+    number,
+    #cur.guesses,
+    table.concat(rows, " ")
+  )
 end
 
 function Leyword.ShareTo(kind)
-  local lines = Leyword.ShareLines()
-  if not lines then
+  local text = Leyword.ShareLines()
+  if not text then
     return "Solve today's word first."
   end
   local target
@@ -194,12 +161,10 @@ function Leyword.ShareTo(kind)
   elseif kind ~= "SAY" and kind ~= "YELL" then
     return "Solve today's word first."
   end
-  for i = 1, #lines do
-    shareQueue[#shareQueue + 1] = { text = lines[i], kind = kind, target = target }
-  end
-  if not sharePumping then
-    sharePumping = true
-    PumpShare()
+  if target then
+    SendChatMessage(text, kind, nil, target)
+  else
+    SendChatMessage(text, kind)
   end
   return nil
 end

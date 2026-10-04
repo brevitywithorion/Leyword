@@ -148,8 +148,7 @@ export function buildLists(extraAnswers: string[], extraGuesses: string[]) {
 export function shareChat(number: number, states: string[]): string[] {
   const grid = states.map((state) => state.replace(/[^GYB]/g, "")).join(" ");
   return [
-    `Leyword ${number} ${states.length}/6 ${grid}`,
-    "Don't have Leyword? Install the addon to play today's word.",
+    `Leyword ${number} ${states.length}/6 ${grid}. Don't have Leyword? Install the addon to play today's word.`,
   ];
 }
 
