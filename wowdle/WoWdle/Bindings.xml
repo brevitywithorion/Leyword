@@ -1,0 +1,5 @@
+<Bindings>
+  <Binding name="WOWDLE_TOGGLE" category="WoWdle">
+    WoWdle_Toggle()
+  </Binding>
+</Bindings>
