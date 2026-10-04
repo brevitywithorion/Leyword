@@ -4,7 +4,6 @@ import {
   buildLists,
   dateKey,
   emptyStats,
-  hardViolation,
   isGuess,
   parseWordList,
   puzzleNumber,
@@ -24,8 +23,8 @@ type Save = {
   states: string[];
   done: Done;
   recorded: boolean;
-  hardMode: boolean;
-  settings: { hardMode: boolean; colorblind: boolean; keyboard?: boolean };
+  extraAnswer?: string;
+  settings: { colorblind: boolean; keyboard?: boolean };
   stats: Stats;
 };
 
@@ -44,8 +43,7 @@ function blankSave(now = new Date()): Save {
     states: [],
     done: "play",
     recorded: false,
-    hardMode: false,
-    settings: { hardMode: false, colorblind: false, keyboard: true },
+    settings: { colorblind: false, keyboard: true },
     stats: emptyStats(),
   };
 }
@@ -117,7 +115,8 @@ export function LeywordApp() {
   }, [extras, wordsReady]);
 
   const number = puzzleNumber(save.y, save.m, save.d);
-  const answer = answerFor(save.y, save.m, save.d, lists.answers);
+  const dailyAnswer = answerFor(save.y, save.m, save.d, lists.answers);
+  const answer = save.extraAnswer ?? dailyAnswer;
   const active = save.guesses.length;
   const best: Record<string, string> = {};
   const rank: Record<string, number> = { B: 1, Y: 2, G: 3 };
@@ -153,14 +152,6 @@ export function LeywordApp() {
       setMessage("Already tried.");
       return;
     }
-    const hard = save.guesses.length === 0 ? save.settings.hardMode : save.hardMode;
-    if (hard) {
-      const why = hardViolation(save.guesses, save.states, guess);
-      if (why) {
-        setMessage(why);
-        return;
-      }
-    }
     const state = scoreGuess(answer, guess);
     const guesses = [...save.guesses, guess];
     const states = [...save.states, state];
@@ -168,7 +159,7 @@ export function LeywordApp() {
     const done: Done = won ? "win" : guesses.length >= 6 ? "loss" : "play";
     let stats = save.stats;
     let recorded = save.recorded;
-    if (done !== "play" && !recorded) {
+    if (done !== "play" && !recorded && !save.extraAnswer) {
       stats = recordFinish(stats, save.y, save.m, save.d, won, guesses.length);
       recorded = true;
     }
@@ -178,7 +169,6 @@ export function LeywordApp() {
       states,
       done,
       recorded,
-      hardMode: hard,
       stats,
     });
     setDraft("");
@@ -193,7 +183,7 @@ export function LeywordApp() {
     <main className="stage">
       <section className="panel" data-colorblind={save.settings.colorblind ? "true" : "false"} aria-label="Leyword">
         <h1 className="title">Leyword</h1>
-        <p className="number" suppressHydrationWarning>No. {number}</p>
+        <p className="number" suppressHydrationWarning>{save.extraAnswer ? "Extra" : `No. ${number}`}</p>
         <div className="tabs" role="tablist">
           <button className="tab" type="button" role="tab" aria-selected={tab === "puzzle"} onClick={() => setTab("puzzle")}>
             Puzzle
@@ -279,17 +269,6 @@ export function LeywordApp() {
               <label className="check">
                 <input
                   type="checkbox"
-                  checked={save.guesses.length > 0 ? save.hardMode : save.settings.hardMode}
-                  disabled={save.guesses.length > 0}
-                  onChange={(event) =>
-                    setSave({ ...save, settings: { ...save.settings, hardMode: event.target.checked } })
-                  }
-                />
-                Hard mode
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
                   checked={save.settings.colorblind}
                   onChange={(event) =>
                     setSave({ ...save, settings: { ...save.settings, colorblind: event.target.checked } })
@@ -322,6 +301,28 @@ export function LeywordApp() {
                 ))}
               </div>
             ) : null}
+            {save.done !== "play" ? (
+              <button
+                className="wow-button"
+                type="button"
+                onClick={() => {
+                  const pool = lists.answers.filter((word) => word !== dailyAnswer && word !== save.extraAnswer);
+                  const pick = pool[Math.floor(Math.random() * pool.length)] ?? dailyAnswer;
+                  setSave({
+                    ...save,
+                    guesses: [],
+                    states: [],
+                    done: "play",
+                    extraAnswer: pick,
+                    recorded: true,
+                  });
+                  setDraft("");
+                  setMessage("");
+                }}
+              >
+                Another
+              </button>
+            ) : null}
             {save.done === "win" ? (
               <div className="share-row">
                 {(
@@ -339,7 +340,7 @@ export function LeywordApp() {
                     className="wow-button"
                     type="button"
                     onClick={() => {
-                      const lines = shareChat(number, save.states);
+                      const lines = shareChat(number, save.states, Boolean(save.extraAnswer));
                       const text = lines.join("\n");
                       void navigator.clipboard?.writeText(text).then(
                         () => setMessage(`/${slash}  ${lines[0]}`),

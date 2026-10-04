@@ -54,6 +54,7 @@ function Leyword.ApplyBuiltinSkins()
         Try(skins.HandleEditBox, skins, frames.guessBox)
         Try(skins.HandleButton, skins, frames.submit)
         Try(skins.HandleButton, skins, frames.share)
+        Try(skins.HandleButton, skins, frames.another)
         if frames.channels then
           for i = 1, #frames.channels do
             Try(skins.HandleButton, skins, frames.channels[i])
@@ -63,7 +64,6 @@ function Leyword.ApplyBuiltinSkins()
         Try(skins.HandleButton, skins, frames.puzzleTab)
         Try(skins.HandleButton, skins, frames.guildTab)
         Try(skins.HandleCloseButton, skins, frames.main.CloseButton)
-        Try(skins.HandleCheckBox, skins, frames.hardMode)
         Try(skins.HandleCheckBox, skins, frames.colorblind)
         Try(skins.HandleCheckBox, skins, frames.keyboard)
         Try(skins.HandleScrollBar, skins, _G.LeywordGuildScrollScrollBar)
@@ -76,6 +76,7 @@ function Leyword.ApplyBuiltinSkins()
       Try(T.SkinFrame, frames.main)
       Try(T.SkinButton, frames.submit)
       Try(T.SkinButton, frames.share)
+      Try(T.SkinButton, frames.another)
       if frames.channels then
         for i = 1, #frames.channels do
           Try(T.SkinButton, frames.channels[i])
@@ -83,7 +84,6 @@ function Leyword.ApplyBuiltinSkins()
       end
       Try(T.SkinButton, frames.back)
       Try(T.SkinEditBox, frames.guessBox)
-      Try(T.SkinCheckBox, frames.hardMode)
       Try(T.SkinCheckBox, frames.colorblind)
       Try(T.SkinCheckBox, frames.keyboard)
       Try(T.SkinCloseButton, frames.main.CloseButton)
@@ -143,13 +143,13 @@ function Leyword.ApplyEllesmere(skin)
   end
   call("Button", frames.submit)
   call("Button", frames.share)
+  call("Button", frames.another)
   if frames.channels then
     for i = 1, #frames.channels do
       call("Button", frames.channels[i])
     end
   end
   call("Button", frames.back)
-  call("Checkbox", frames.hardMode)
   call("Checkbox", frames.colorblind)
   call("Checkbox", frames.keyboard)
   call("Tab", frames.puzzleTab)

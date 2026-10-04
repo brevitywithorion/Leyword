@@ -109,21 +109,25 @@ local function AddEscape(name)
 end
 
 function Leyword.ShareLines()
-  local cur = LeywordDB.current
+  local cur = Leyword.Round()
   if not cur or cur.done ~= "win" then
     return nil
   end
-  local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
   local rows = {}
   for i = 1, #cur.states do
     rows[i] = (cur.states[i] or ""):gsub("[^GYB]", "")
   end
-  return string.format(
-    "Leyword %d %d/6 %s. Don't have Leyword? Install the addon to play today's word.",
-    number,
-    #cur.guesses,
-    table.concat(rows, " ")
-  )
+  local head
+  if cur.extra then
+    head = string.format("Leyword extra %d/6", #cur.guesses)
+  else
+    local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+    head = string.format("Leyword %d %d/6", number, #cur.guesses)
+  end
+  return head
+    .. " "
+    .. table.concat(rows, " ")
+    .. ". https://www.curseforge.com/wow/addons/leyword"
 end
 
 function Leyword.ShareTo(kind)
@@ -174,9 +178,9 @@ function Leyword.Refresh()
   if not frames or not frames.main:IsShown() then
     return
   end
-  local cur = Leyword.EnsureToday()
+  local cur = Leyword.Round()
   local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
-  frames.number:SetText("No. " .. number)
+  frames.number:SetText(cur.extra and "Extra" or ("No. " .. number))
   local draft = cur.done == "play" and string.lower(Leyword.draft or "") or ""
   local active = #cur.guesses + 1
   for row = 1, 6 do
@@ -209,9 +213,6 @@ function Leyword.Refresh()
   for letter, button in pairs(frames.keys) do
     Leyword.ApplyKey(button, best[letter])
   end
-  local locked = #cur.guesses > 0
-  frames.hardMode:SetEnabled(not locked)
-  frames.hardMode:SetChecked(locked and cur.hardMode or LeywordDB.settings.hardMode)
   frames.colorblind:SetChecked(LeywordDB.settings.colorblind)
   local showKeys = LeywordDB.settings.keyboard ~= false
   frames.keyboard:SetChecked(showKeys)
@@ -219,15 +220,18 @@ function Leyword.Refresh()
   if cur.done == "win" then
     frames.result:SetText("Solved in " .. #cur.guesses .. ".")
     frames.share:Enable()
+    frames.another:Show()
   else
     if frames.shareMenu then
       frames.shareMenu:Hide()
     end
     if cur.done == "loss" then
-      local word = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+      local word = cur.answer or Leyword.AnswerFor(cur.y, cur.m, cur.d)
       frames.result:SetText("The word was " .. word:upper() .. ".")
+      frames.another:Show()
     else
       frames.result:SetText("")
+      frames.another:Hide()
     end
     frames.share:Disable()
   end
@@ -301,7 +305,7 @@ end
 
 local function Build()
   local frame = CreateFrame("Frame", "LeywordFrame", UIParent, "BasicFrameTemplateWithInset")
-  frame:SetSize(470, 700)
+  frame:SetSize(470, 720)
   frame:SetFrameStrata("DIALOG")
   frame:SetFrameLevel(200)
   frame:SetToplevel(true)
@@ -324,15 +328,16 @@ local function Build()
   end
   if frame.TitleText then
     frame.TitleText:SetText("Leyword")
-    if not frame.TitleText:SetFont("Fonts\\MORPHEUS.TTF", 16, "") then
-      frame.TitleText:SetFont("Fonts\\MORPHEUS.ttf", 16, "")
+    if not frame.TitleText:SetFont("Fonts\\MORPHEUS.TTF", 28, "") then
+      frame.TitleText:SetFont("Fonts\\MORPHEUS.ttf", 28, "")
     end
+    frame.TitleText:SetPoint("TOP", frame, "TOP", 0, -4)
   end
   AddEscape("LeywordFrame")
   local anchor = frame.Inset or frame
   local puzzleTab = CreateFrame("Button", "LeywordPuzzleTab", frame, "UIPanelButtonTemplate")
   puzzleTab:SetSize(90, 22)
-  puzzleTab:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -36)
+  puzzleTab:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -44)
   puzzleTab:SetText("Puzzle")
   local guildTab = CreateFrame("Button", "LeywordGuildTab", frame, "UIPanelButtonTemplate")
   guildTab:SetSize(90, 22)
@@ -340,7 +345,7 @@ local function Build()
   guildTab:SetText("Guild")
 
   local board = CreateFrame("Frame", nil, frame)
-  board:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -64)
+  board:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -74)
   board:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 12)
   local guild = CreateFrame("Frame", nil, frame)
   guild:SetPoint("TOPLEFT", board, "TOPLEFT")
@@ -397,6 +402,11 @@ local function Build()
   share:SetPoint("LEFT", submit, "RIGHT", 4, 0)
   share:SetText("Share")
   share:Disable()
+  local another = CreateFrame("Button", "LeywordAnotherButton", board, "UIPanelButtonTemplate")
+  another:SetSize(78, 22)
+  another:SetPoint("TOPRIGHT", board, "TOPRIGHT", -12, -556)
+  another:SetText("Another")
+  another:Hide()
   local menu = CreateFrame("Frame", "LeywordShareMenu", frame, "BackdropTemplate")
   menu:SetSize(196, 58)
   menu:SetPoint("TOP", share, "BOTTOM", 0, -2)
@@ -463,7 +473,7 @@ local function Build()
         label:SetFontObject(GameFontNormalSmall)
       end
       key:SetScript("OnClick", function()
-        local cur = LeywordDB.current
+        local cur = Leyword.Round()
         if cur and cur.done ~= "play" then
           return
         end
@@ -474,14 +484,11 @@ local function Build()
     end
   end
 
-  local hardMode = CreateFrame("CheckButton", "LeywordHardModeCheck", board, "UICheckButtonTemplate")
-  hardMode:SetPoint("TOPLEFT", board, "TOPLEFT", 8, -560)
-  CheckText(hardMode, "Hard mode")
   local colorblind = CreateFrame("CheckButton", "LeywordColorblindCheck", board, "UICheckButtonTemplate")
-  colorblind:SetPoint("LEFT", hardMode, "RIGHT", 96, 0)
+  colorblind:SetPoint("TOP", board, "TOP", -120, -560)
   CheckText(colorblind, "Colorblind")
   local keyboard = CreateFrame("CheckButton", "LeywordKeyboardCheck", board, "UICheckButtonTemplate")
-  keyboard:SetPoint("LEFT", colorblind, "RIGHT", 112, 0)
+  keyboard:SetPoint("TOP", board, "TOP", 48, -560)
   CheckText(keyboard, "Keys")
   keyboard:SetChecked(LeywordDB.settings.keyboard ~= false)
   keypad:SetShown(LeywordDB.settings.keyboard ~= false)
@@ -555,18 +562,19 @@ local function Build()
   end)
   submit:SetScript("OnClick", Submit)
   share:SetScript("OnClick", function()
-    if LeywordDB.current and LeywordDB.current.done ~= "win" then
+    local cur = Leyword.Round()
+    if not cur or cur.done ~= "win" then
       return
     end
     menu:SetShown(not menu:IsShown())
   end)
-  hardMode:SetScript("OnClick", function(self)
-    local cur = Leyword.EnsureToday()
-    if #cur.guesses > 0 then
-      self:SetChecked(cur.hardMode and true or false)
-      return
-    end
-    LeywordDB.settings.hardMode = self:GetChecked() and true or false
+  another:SetScript("OnClick", function()
+    Leyword.StartExtra()
+    box:SetText("")
+    Leyword.draft = ""
+    status:SetText("")
+    menu:Hide()
+    Leyword.Refresh()
   end)
   colorblind:SetScript("OnClick", function(self)
     LeywordDB.settings.colorblind = self:GetChecked() and true or false
@@ -610,12 +618,12 @@ local function Build()
     guessBox = box,
     submit = submit,
     share = share,
+    another = another,
     shareMenu = menu,
     channels = channels,
     back = back,
     puzzleTab = puzzleTab,
     guildTab = guildTab,
-    hardMode = hardMode,
     colorblind = colorblind,
     keyboard = keyboard,
     status = status,

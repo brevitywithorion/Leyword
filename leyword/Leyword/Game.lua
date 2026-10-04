@@ -112,6 +112,70 @@ function Leyword.HardViolation(guesses, states, guess)
   return nil
 end
 
+function Leyword.Round()
+  local daily = Leyword.EnsureToday()
+  local extra = LeywordDB.extra
+  if type(extra) == "table" and extra.date == daily.date then
+    return extra
+  end
+  if type(extra) == "table" then
+    LeywordDB.extra = nil
+  end
+  return daily
+end
+
+function Leyword.StartExtra()
+  local daily = Leyword.EnsureToday()
+  local showing = Leyword.Round()
+  if showing.done == "play" then
+    return
+  end
+  local list = Leyword.Answers
+  if type(list) ~= "table" or #list < 1 then
+    return
+  end
+  local todayAnswer = Leyword.AnswerFor(daily.y, daily.m, daily.d)
+  if LeywordDB.usedDate ~= daily.date or type(LeywordDB.used) ~= "table" then
+    LeywordDB.used = {}
+    LeywordDB.usedDate = daily.date
+  end
+  LeywordDB.used[todayAnswer] = true
+  if showing.answer then
+    LeywordDB.used[showing.answer] = true
+  end
+  local pick
+  for _ = 1, 50 do
+    local word = list[math.random(#list)]
+    if not LeywordDB.used[word] then
+      pick = word
+      break
+    end
+  end
+  if not pick then
+    LeywordDB.used = { [todayAnswer] = true }
+    pick = list[math.random(#list)]
+    if pick == todayAnswer and #list > 1 then
+      pick = list[(math.random(#list - 1) % #list) + 1]
+    end
+  end
+  LeywordDB.used[pick] = true
+  LeywordDB.extra = {
+    date = daily.date,
+    y = daily.y,
+    m = daily.m,
+    d = daily.d,
+    answer = pick,
+    guesses = {},
+    states = {},
+    done = "play",
+    recorded = true,
+    shared = true,
+    extra = true,
+    character = nil,
+  }
+  Leyword.draft = ""
+end
+
 function Leyword.EnsureToday()
   local y, m, d = Leyword.Today()
   local key = Leyword.DateKey(y, m, d)
@@ -127,7 +191,6 @@ function Leyword.EnsureToday()
       done = "play",
       recorded = false,
       shared = false,
-      hardMode = false,
       character = nil,
     }
     LeywordDB.current = cur
@@ -175,9 +238,9 @@ function Leyword.RecordFinish(cur)
 end
 
 function Leyword.SubmitGuess(raw)
-  local cur = Leyword.EnsureToday()
+  local cur = Leyword.Round()
   if cur.done ~= "play" then
-    return "Already finished today."
+    return "Already finished."
   end
   local text = string.lower(raw or ""):gsub("[^a-z]", "")
   if #text ~= 5 then
@@ -191,16 +254,7 @@ function Leyword.SubmitGuess(raw)
       return "Already tried."
     end
   end
-  if #cur.guesses == 0 then
-    cur.hardMode = LeywordDB.settings.hardMode and true or false
-  end
-  if cur.hardMode then
-    local why = Leyword.HardViolation(cur.guesses, cur.states, text)
-    if why then
-      return why
-    end
-  end
-  local answer = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+  local answer = cur.answer or Leyword.AnswerFor(cur.y, cur.m, cur.d)
   local marks = Leyword.Score(answer, text)
   cur.guesses[#cur.guesses + 1] = text
   cur.states[#cur.states + 1] = marks
@@ -209,7 +263,7 @@ function Leyword.SubmitGuess(raw)
   elseif #cur.guesses >= 6 then
     cur.done = "loss"
   end
-  if cur.done ~= "play" then
+  if cur.done ~= "play" and not cur.extra then
     cur.character = CharacterName()
     Leyword.RecordFinish(cur)
     if Leyword.BroadcastResult then

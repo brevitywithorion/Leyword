@@ -145,11 +145,12 @@ export function buildLists(extraAnswers: string[], extraGuesses: string[]) {
   };
 }
 
-export function shareChat(number: number, states: string[]): string[] {
+export function shareChat(number: number, states: string[], extra = false): string[] {
   const grid = states.map((state) => state.replace(/[^GYB]/g, "")).join(" ");
-  return [
-    `Leyword ${number} ${states.length}/6 ${grid}. Don't have Leyword? Install the addon to play today's word.`,
-  ];
+  const head = extra
+    ? `Leyword extra ${states.length}/6`
+    : `Leyword ${number} ${states.length}/6`;
+  return [`${head} ${grid}. https://www.curseforge.com/wow/addons/leyword`];
 }
 
 export type Stats = {

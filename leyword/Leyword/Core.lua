@@ -2,7 +2,6 @@ Leyword = Leyword or {}
 
 local DEFAULTS = {
   settings = {
-    hardMode = false,
     colorblind = false,
     keyboard = true,
     useUISkin = true,
