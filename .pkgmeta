@@ -1,0 +1,22 @@
+package-as: Leyword
+
+move-folders:
+  leyword/Leyword: Leyword
+
+ignore:
+  - README.md
+  - curseforge-icon.png
+  - eslint.config.mjs
+  - migrations
+  - package-lock.json
+  - package.json
+  - public
+  - scripts
+  - server
+  - src
+  - startup.sh
+  - tsconfig.json
+  - vercel.json
+  - vite.config.ts
+  - leyword/build-words.mjs
+  - leyword/extra-words.txt
