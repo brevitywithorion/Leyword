@@ -84,7 +84,7 @@ function WoWdle_CompartmentEnter(a, b)
   end
   GameTooltip:SetOwner(owner, "ANCHOR_LEFT")
   GameTooltip:ClearLines()
-  GameTooltip:AddLine("Wordle of Warcraft", 1, 0.82, 0.45)
+  GameTooltip:AddLine("Leyword", 1, 0.82, 0.45)
   GameTooltip:AddLine("Daily word puzzle", 1, 1, 1)
   GameTooltip:Show()
 end
@@ -102,11 +102,11 @@ SlashCmdList.WOWDLE = function(msg)
   msg = string.lower(msg or ""):gsub("^%s+", ""):gsub("%s+$", "")
   if msg == "noskin" then
     WoWdleDB.settings.useUISkin = false
-    print("|cffd4a85aWordle of Warcraft|r will keep the Blizzard frame after you reload. EllesmereUI still follows its own skin toggle.")
+    print("|cffd4a85aLeyword|r will keep the Blizzard frame after you reload. EllesmereUI still follows its own skin toggle.")
     return
   elseif msg == "skin" then
     WoWdleDB.settings.useUISkin = true
-    print("|cffd4a85aWordle of Warcraft|r will match ElvUI and Tukui after you reload.")
+    print("|cffd4a85aLeyword|r will match ElvUI and Tukui after you reload.")
     return
   elseif msg == "test" then
     WoWdle.SelfTest()

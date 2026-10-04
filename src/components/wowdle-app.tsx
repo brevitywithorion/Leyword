@@ -191,8 +191,8 @@ export function WoWdleApp() {
 
   return (
     <main className="stage">
-      <section className="panel" data-colorblind={save.settings.colorblind ? "true" : "false"} aria-label="Wordle of Warcraft">
-        <h1 className="title">Wordle of Warcraft</h1>
+      <section className="panel" data-colorblind={save.settings.colorblind ? "true" : "false"} aria-label="Leyword">
+        <h1 className="title">Leyword</h1>
         <p className="number" suppressHydrationWarning>No. {number}</p>
         <div className="tabs" role="tablist">
           <button className="tab" type="button" role="tab" aria-selected={tab === "puzzle"} onClick={() => setTab("puzzle")}>

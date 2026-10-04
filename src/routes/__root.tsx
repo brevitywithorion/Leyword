@@ -8,7 +8,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Wordle of Warcraft" },
+      { title: "Leyword" },
       { name: "theme-color", content: "#1c140e" },
     ],
     links: [

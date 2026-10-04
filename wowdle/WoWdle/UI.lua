@@ -116,7 +116,7 @@ function WoWdle.ShareLines()
   end
   local _, number = WoWdle.AnswerFor(cur.y, cur.m, cur.d)
   local pal = WoWdle.Palette()
-  local lines = { string.format("Wordle of Warcraft %d %d/6", number, #cur.guesses) }
+  local lines = { string.format("Leyword %d %d/6", number, #cur.guesses) }
   local chunk = {}
   for i = 1, #cur.states do
     local bits = {}
@@ -130,7 +130,7 @@ function WoWdle.ShareLines()
       chunk = {}
     end
   end
-  lines[#lines + 1] = "Don't have Wordle of Warcraft? Install the addon to play today's word."
+  lines[#lines + 1] = "Don't have Leyword? Install the addon to play today's word."
   return lines
 end
 
@@ -309,7 +309,7 @@ function WoWdle.RefreshGuild()
   if not IsInGuild() then
     frames.guildEmpty:SetText("Join a guild to compare today's score and grid.")
   elseif #rows == 0 then
-    frames.guildEmpty:SetText("No guild results yet. Finish the puzzle and anyone with Wordle of Warcraft in your guild will see the grid, not the words.")
+    frames.guildEmpty:SetText("No guild results yet. Finish the puzzle and anyone with Leyword in your guild will see the grid, not the words.")
   else
     frames.guildEmpty:SetText("")
   end
@@ -350,9 +350,9 @@ local function Build()
     frame:SetPoint("CENTER")
   end
   if frame.TitleText then
-    frame.TitleText:SetText("Wordle of Warcraft")
-    if not frame.TitleText:SetFont("Fonts\\MORPHEUS.TTF", 13, "") then
-      frame.TitleText:SetFont("Fonts\\MORPHEUS.ttf", 13, "")
+    frame.TitleText:SetText("Leyword")
+    if not frame.TitleText:SetFont("Fonts\\MORPHEUS.TTF", 16, "") then
+      frame.TitleText:SetFont("Fonts\\MORPHEUS.ttf", 16, "")
     end
   end
   AddEscape("WoWdleFrame")

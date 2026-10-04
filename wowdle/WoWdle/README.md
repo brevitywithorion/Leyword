@@ -1,4 +1,4 @@
-# Wordle of Warcraft
+# Leyword
 
 One five-letter puzzle per realm day for WoW Forever. The addon folder is still `WoWdle`. Guildmates who have the addon see your score and the colored grid. The words you guessed are never sent.
 
@@ -6,7 +6,7 @@ One five-letter puzzle per realm day for WoW Forever. The addon folder is still 
 
 1. Close the game.
 2. Unzip so the folder is `Interface\AddOns\WoWdle`. On the Forever beta client that is `World of Warcraft\_classic_beta_\Interface\AddOns\WoWdle`. The folder name has to match the toc name.
-3. Start the game and enable Wordle of Warcraft if it is unchecked.
+3. Start the game and enable Leyword if it is unchecked.
 4. Type `/wowdle` or `/wd`, or open it from the minimap addon compartment.
 
 ## Commands

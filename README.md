@@ -1,4 +1,4 @@
-# Wordle of Warcraft
+# Leyword
 
 A daily five-letter puzzle for WoW Forever, plus the web preview. Free to use and fork. Not a commercial product. The addon folder is `WoWdle`, so an existing install keeps working.
 
