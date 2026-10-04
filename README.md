@@ -1,6 +1,6 @@
-# WoWdle
+# Wordle of Warcraft
 
-A daily five-letter puzzle for WoW Forever, plus the web preview. Free to use and fork. Not a commercial product.
+A daily five-letter puzzle for WoW Forever, plus the web preview. Free to use and fork. Not a commercial product. The addon folder is `WoWdle`, so an existing install keeps working.
 
 Guildmates who have the addon see your score and the colored grid. The words you guessed are never sent.
 

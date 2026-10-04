@@ -148,8 +148,8 @@ export function buildLists(extraAnswers: string[], extraGuesses: string[]) {
 export function shareChat(number: number, states: string[]): string[] {
   const grid = states.map((state) => state.replace(/[^GYB]/g, "")).join(" ");
   return [
-    `WoWdle ${number} ${states.length}/6 ${grid}`,
-    "Don't have WoWdle? Install the addon to play today's word.",
+    `Wordle of Warcraft ${number} ${states.length}/6 ${grid}`,
+    "Don't have Wordle of Warcraft? Install the addon to play today's word.",
   ];
 }
 

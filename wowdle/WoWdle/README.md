@@ -1,12 +1,12 @@
-# WoWdle
+# Wordle of Warcraft
 
-One five-letter puzzle per realm day for WoW Forever. Guildmates who have the addon see your score and the colored grid. The words you guessed are never sent.
+One five-letter puzzle per realm day for WoW Forever. The addon folder is still `WoWdle`. Guildmates who have the addon see your score and the colored grid. The words you guessed are never sent.
 
 ## Install
 
 1. Close the game.
 2. Unzip so the folder is `Interface\AddOns\WoWdle`. On the Forever beta client that is `World of Warcraft\_classic_beta_\Interface\AddOns\WoWdle`. The folder name has to match the toc name.
-3. Start the game and enable WoWdle if it is unchecked.
+3. Start the game and enable Wordle of Warcraft if it is unchecked.
 4. Type `/wowdle` or `/wd`, or open it from the minimap addon compartment.
 
 ## Commands
@@ -31,7 +31,7 @@ A plain text list works in the preview too: one word per line. Put `guesses` on 
 
 EllesmereUI skins the window through its own skinning API when that addon is installed. The letter tiles and keyboard keep the puzzle colors. ElvUI and Tukui are matched unless you run `/wowdle noskin`.
 
-Other UI addons can reskin WoWdle without editing it. Frames use Blizzard templates only.
+Other UI addons can reskin the window without editing it. Frames use Blizzard templates only.
 
 ```lua
 WoWdle.RegisterSkin(function(frames)
