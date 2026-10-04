@@ -6,9 +6,9 @@
 -- guesses: extra words that count as a guess and are never the puzzle.
 -- Leave answers empty to keep the shared puzzle.
 
-WoWdle = WoWdle or {}
-WoWdle.Answers = WoWdle.Answers or {}
-WoWdle.GuessSet = WoWdle.GuessSet or {}
+Leyword = Leyword or {}
+Leyword.Answers = Leyword.Answers or {}
+Leyword.GuessSet = Leyword.GuessSet or {}
 
 local answers = {
   -- "glyph",
@@ -36,17 +36,17 @@ for i = 1, #answers do
   if word and not seen[word] then
     seen[word] = true
     custom[#custom + 1] = word
-    WoWdle.GuessSet[word] = true
+    Leyword.GuessSet[word] = true
   end
 end
 
 if #custom > 0 then
-  WoWdle.Answers = custom
+  Leyword.Answers = custom
 end
 
 for i = 1, #guesses do
   local word = Clean(guesses[i])
   if word then
-    WoWdle.GuessSet[word] = true
+    Leyword.GuessSet[word] = true
   end
 end

@@ -1,8 +1,8 @@
-WoWdle = WoWdle or {}
+Leyword = Leyword or {}
 
 local EPOCH_Y, EPOCH_M, EPOCH_D = 2026, 1, 1
 
-function WoWdle.Rdn(y, m, d)
+function Leyword.Rdn(y, m, d)
   local a = math.floor((14 - m) / 12)
   local yy = y + 4800 - a
   local mm = m + 12 * a - 3
@@ -15,18 +15,18 @@ function WoWdle.Rdn(y, m, d)
     - 32045
 end
 
-function WoWdle.DateKey(y, m, d)
+function Leyword.DateKey(y, m, d)
   return string.format("%04d%02d%02d", y, m, d)
 end
 
-function WoWdle.PuzzleNumber(y, m, d)
-  return WoWdle.Rdn(y, m, d) - WoWdle.Rdn(EPOCH_Y, EPOCH_M, EPOCH_D) + 1
+function Leyword.PuzzleNumber(y, m, d)
+  return Leyword.Rdn(y, m, d) - Leyword.Rdn(EPOCH_Y, EPOCH_M, EPOCH_D) + 1
 end
 
-function WoWdle.AnswerFor(y, m, d)
-  local list = WoWdle.Answers
+function Leyword.AnswerFor(y, m, d)
+  local list = Leyword.Answers
   local n = #list
-  local number = WoWdle.PuzzleNumber(y, m, d)
+  local number = Leyword.PuzzleNumber(y, m, d)
   local index = (number - 1) % n
   if index < 0 then
     index = index + n
@@ -34,12 +34,12 @@ function WoWdle.AnswerFor(y, m, d)
   return list[index + 1], number
 end
 
-function WoWdle.Today()
+function Leyword.Today()
   local t = C_DateAndTime.GetCurrentCalendarTime()
   return t.year, t.month, t.monthDay or t.day
 end
 
-function WoWdle.ParseKey(key)
+function Leyword.ParseKey(key)
   local y, m, d = tostring(key or ""):match("^(%d%d%d%d)(%d%d)(%d%d)$")
   if not y then
     return nil
@@ -47,7 +47,7 @@ function WoWdle.ParseKey(key)
   return tonumber(y), tonumber(m), tonumber(d)
 end
 
-function WoWdle.Score(answer, guess)
+function Leyword.Score(answer, guess)
   local marks = { "B", "B", "B", "B", "B" }
   local left = {}
   for i = 1, 5 do
@@ -71,7 +71,7 @@ function WoWdle.Score(answer, guess)
   return table.concat(marks)
 end
 
-function WoWdle.HardViolation(guesses, states, guess)
+function Leyword.HardViolation(guesses, states, guess)
   local green = {}
   local minCount = {}
   for i = 1, #guesses do
@@ -112,10 +112,10 @@ function WoWdle.HardViolation(guesses, states, guess)
   return nil
 end
 
-function WoWdle.EnsureToday()
-  local y, m, d = WoWdle.Today()
-  local key = WoWdle.DateKey(y, m, d)
-  local cur = WoWdleDB.current
+function Leyword.EnsureToday()
+  local y, m, d = Leyword.Today()
+  local key = Leyword.DateKey(y, m, d)
+  local cur = LeywordDB.current
   if type(cur) ~= "table" or cur.date ~= key then
     cur = {
       date = key,
@@ -130,7 +130,7 @@ function WoWdle.EnsureToday()
       hardMode = false,
       character = nil,
     }
-    WoWdleDB.current = cur
+    LeywordDB.current = cur
   end
   return cur
 end
@@ -143,23 +143,23 @@ local function CharacterName()
   return (name or "Unknown") .. "-" .. (realm or "")
 end
 
-function WoWdle.RecordFinish(cur)
+function Leyword.RecordFinish(cur)
   if cur.recorded then
     return
   end
   cur.recorded = true
-  local stats = WoWdleDB.stats
+  local stats = LeywordDB.stats
   stats.played = (stats.played or 0) + 1
   if cur.done == "win" then
     stats.wins = (stats.wins or 0) + 1
     local n = #cur.guesses
     stats.dist[n] = (stats.dist[n] or 0) + 1
-    if stats.lastDate and WoWdle.Rdn(cur.y, cur.m, cur.d) - (function()
-      local py, pm, pd = WoWdle.ParseKey(stats.lastDate)
+    if stats.lastDate and Leyword.Rdn(cur.y, cur.m, cur.d) - (function()
+      local py, pm, pd = Leyword.ParseKey(stats.lastDate)
       if not py then
-        return WoWdle.Rdn(cur.y, cur.m, cur.d)
+        return Leyword.Rdn(cur.y, cur.m, cur.d)
       end
-      return WoWdle.Rdn(py, pm, pd)
+      return Leyword.Rdn(py, pm, pd)
     end)() == 1 then
       stats.streak = (stats.streak or 0) + 1
     else
@@ -174,8 +174,8 @@ function WoWdle.RecordFinish(cur)
   stats.lastDate = cur.date
 end
 
-function WoWdle.SubmitGuess(raw)
-  local cur = WoWdle.EnsureToday()
+function Leyword.SubmitGuess(raw)
+  local cur = Leyword.EnsureToday()
   if cur.done ~= "play" then
     return "Already finished today."
   end
@@ -183,7 +183,7 @@ function WoWdle.SubmitGuess(raw)
   if #text ~= 5 then
     return "Enter five letters."
   end
-  if not WoWdle.GuessSet[text] then
+  if not Leyword.GuessSet[text] then
     return "Not in the word list."
   end
   for i = 1, #cur.guesses do
@@ -192,16 +192,16 @@ function WoWdle.SubmitGuess(raw)
     end
   end
   if #cur.guesses == 0 then
-    cur.hardMode = WoWdleDB.settings.hardMode and true or false
+    cur.hardMode = LeywordDB.settings.hardMode and true or false
   end
   if cur.hardMode then
-    local why = WoWdle.HardViolation(cur.guesses, cur.states, text)
+    local why = Leyword.HardViolation(cur.guesses, cur.states, text)
     if why then
       return why
     end
   end
-  local answer = WoWdle.AnswerFor(cur.y, cur.m, cur.d)
-  local marks = WoWdle.Score(answer, text)
+  local answer = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+  local marks = Leyword.Score(answer, text)
   cur.guesses[#cur.guesses + 1] = text
   cur.states[#cur.states + 1] = marks
   if text == answer then
@@ -211,37 +211,37 @@ function WoWdle.SubmitGuess(raw)
   end
   if cur.done ~= "play" then
     cur.character = CharacterName()
-    WoWdle.RecordFinish(cur)
-    if WoWdle.BroadcastResult then
-      WoWdle.BroadcastResult()
+    Leyword.RecordFinish(cur)
+    if Leyword.BroadcastResult then
+      Leyword.BroadcastResult()
     end
   end
   return nil
 end
 
-function WoWdle.SelfTest()
+function Leyword.SelfTest()
   local fails = {}
   local function eq(name, got, expect)
     if got ~= expect then
       fails[#fails + 1] = name .. " got " .. tostring(got)
     end
   end
-  eq("crane", WoWdle.Score("crane", "crane"), "GGGGG")
-  eq("trace", WoWdle.Score("crane", "trace"), "BGGYG")
-  eq("llama", WoWdle.Score("allot", "llama"), "YGYBB")
-  eq("boost", WoWdle.Score("books", "boost"), "GGGYB")
-  eq("babes", WoWdle.Score("abbey", "babes"), "YYGGB")
-  eq("epoch", WoWdle.PuzzleNumber(2026, 1, 1), 1)
-  eq("oct4", WoWdle.PuzzleNumber(2026, 10, 4), 277)
-  if WoWdle.HardViolation({ "slate" }, { "BBGBG" }, "apple") == nil then
+  eq("crane", Leyword.Score("crane", "crane"), "GGGGG")
+  eq("trace", Leyword.Score("crane", "trace"), "BGGYG")
+  eq("llama", Leyword.Score("allot", "llama"), "YGYBB")
+  eq("boost", Leyword.Score("books", "boost"), "GGGYB")
+  eq("babes", Leyword.Score("abbey", "babes"), "YYGGB")
+  eq("epoch", Leyword.PuzzleNumber(2026, 1, 1), 1)
+  eq("oct4", Leyword.PuzzleNumber(2026, 10, 4), 277)
+  if Leyword.HardViolation({ "slate" }, { "BBGBG" }, "apple") == nil then
     fails[#fails + 1] = "hard mode allowed apple"
   end
-  if WoWdle.HardViolation({ "slate" }, { "BBGBG" }, "crane") ~= nil then
+  if Leyword.HardViolation({ "slate" }, { "BBGBG" }, "crane") ~= nil then
     fails[#fails + 1] = "hard mode blocked crane"
   end
   if #fails == 0 then
-    print("|cffd4a85aWoWdle|r checks passed")
+    print("|cffd4a85aLeyword|r checks passed")
   else
-    print("|cffff4040WoWdle|r " .. table.concat(fails, "; "))
+    print("|cffff4040Leyword|r " .. table.concat(fails, "; "))
   end
 end

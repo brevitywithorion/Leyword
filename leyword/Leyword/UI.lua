@@ -1,6 +1,6 @@
-WoWdle = WoWdle or {}
+Leyword = Leyword or {}
 
-WoWdle.Colors = {
+Leyword.Colors = {
   normal = {
     G = { 0.247, 0.420, 0.271 },
     Y = { 0.651, 0.518, 0.184 },
@@ -13,20 +13,20 @@ WoWdle.Colors = {
   },
 }
 
-function WoWdle.Palette()
-  if WoWdleDB and WoWdleDB.settings and WoWdleDB.settings.colorblind then
-    return WoWdle.Colors.colorblind
+function Leyword.Palette()
+  if LeywordDB and LeywordDB.settings and LeywordDB.settings.colorblind then
+    return Leyword.Colors.colorblind
   end
-  return WoWdle.Colors.normal
+  return Leyword.Colors.normal
 end
 
 local function Hex(c)
   return string.format("%02x%02x%02x", math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
 end
 
-function WoWdle.ApplyTile(tile, letter, mark)
+function Leyword.ApplyTile(tile, letter, mark)
   tile.letter:SetText(letter or "")
-  local color = mark and WoWdle.Palette()[mark]
+  local color = mark and Leyword.Palette()[mark]
   if color then
     tile:SetBackdropColor(color[1], color[2], color[3], 1)
     tile:SetBackdropBorderColor(color[1] * 0.55, color[2] * 0.55, color[3] * 0.55, 1)
@@ -38,11 +38,11 @@ function WoWdle.ApplyTile(tile, letter, mark)
   end
 end
 
-function WoWdle.ApplyKey(button, mark)
+function Leyword.ApplyKey(button, mark)
   local tex = button:GetNormalTexture()
   local label = button:GetFontString()
   if mark then
-    local color = WoWdle.Palette()[mark]
+    local color = Leyword.Palette()[mark]
     if tex then
       tex:SetVertexColor(color[1] + 0.35, color[2] + 0.35, color[3] + 0.35)
     end
@@ -60,7 +60,7 @@ function WoWdle.ApplyKey(button, mark)
 end
 
 local function Swatch(mark)
-  local color = WoWdle.Palette()[mark]
+  local color = Leyword.Palette()[mark]
   if not color then
     return ""
   end
@@ -109,13 +109,13 @@ local function AddEscape(name)
   UISpecialFrames[#UISpecialFrames + 1] = name
 end
 
-function WoWdle.ShareLines()
-  local cur = WoWdleDB.current
+function Leyword.ShareLines()
+  local cur = LeywordDB.current
   if not cur or cur.done ~= "win" then
     return nil
   end
-  local _, number = WoWdle.AnswerFor(cur.y, cur.m, cur.d)
-  local pal = WoWdle.Palette()
+  local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+  local pal = Leyword.Palette()
   local lines = { string.format("Leyword %d %d/6", number, #cur.guesses) }
   local chunk = {}
   for i = 1, #cur.states do
@@ -156,8 +156,8 @@ local function PumpShare()
   end
 end
 
-function WoWdle.ShareTo(kind)
-  local lines = WoWdle.ShareLines()
+function Leyword.ShareTo(kind)
+  local lines = Leyword.ShareLines()
   if not lines then
     return "Solve today's word first."
   end
@@ -201,15 +201,15 @@ function WoWdle.ShareTo(kind)
   return nil
 end
 
-function WoWdle.Refresh()
-  local frames = WoWdle.frames
+function Leyword.Refresh()
+  local frames = Leyword.frames
   if not frames or not frames.main:IsShown() then
     return
   end
-  local cur = WoWdle.EnsureToday()
-  local _, number = WoWdle.AnswerFor(cur.y, cur.m, cur.d)
+  local cur = Leyword.EnsureToday()
+  local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
   frames.number:SetText("No. " .. number)
-  local draft = cur.done == "play" and string.lower(WoWdle.draft or "") or ""
+  local draft = cur.done == "play" and string.lower(Leyword.draft or "") or ""
   local active = #cur.guesses + 1
   for row = 1, 6 do
     local guess = cur.guesses[row]
@@ -222,7 +222,7 @@ function WoWdle.Refresh()
       elseif row == active then
         letter = draft:sub(col, col):upper()
       end
-      WoWdle.ApplyTile(frames.tiles[row][col], letter, mark)
+      Leyword.ApplyTile(frames.tiles[row][col], letter, mark)
     end
   end
   local best = {}
@@ -239,12 +239,12 @@ function WoWdle.Refresh()
     end
   end
   for letter, button in pairs(frames.keys) do
-    WoWdle.ApplyKey(button, best[letter])
+    Leyword.ApplyKey(button, best[letter])
   end
   local locked = #cur.guesses > 0
   frames.hardMode:SetEnabled(not locked)
-  frames.hardMode:SetChecked(locked and cur.hardMode or WoWdleDB.settings.hardMode)
-  frames.colorblind:SetChecked(WoWdleDB.settings.colorblind)
+  frames.hardMode:SetChecked(locked and cur.hardMode or LeywordDB.settings.hardMode)
+  frames.colorblind:SetChecked(LeywordDB.settings.colorblind)
   if cur.done == "win" then
     frames.result:SetText("Solved in " .. #cur.guesses .. ".")
     frames.share:Enable()
@@ -253,26 +253,26 @@ function WoWdle.Refresh()
       frames.shareMenu:Hide()
     end
     if cur.done == "loss" then
-      local word = WoWdle.AnswerFor(cur.y, cur.m, cur.d)
+      local word = Leyword.AnswerFor(cur.y, cur.m, cur.d)
       frames.result:SetText("The word was " .. word:upper() .. ".")
     else
       frames.result:SetText("")
     end
     frames.share:Disable()
   end
-  local stats = WoWdleDB.stats
+  local stats = LeywordDB.stats
   local played = stats.played or 0
   local rate = played > 0 and math.floor((stats.wins / played) * 100 + 0.5) or 0
   frames.stats:SetText(string.format("Played %d    Win %d%%    Streak %d    Max %d", played, rate, stats.streak or 0, stats.maxStreak or 0))
-  WoWdle.RefreshGuild()
+  Leyword.RefreshGuild()
 end
 
-function WoWdle.RefreshGuild()
-  local frames = WoWdle.frames
+function Leyword.RefreshGuild()
+  local frames = Leyword.frames
   if not frames then
     return
   end
-  local cur = WoWdleDB.current
+  local cur = LeywordDB.current
   local rows = {}
   local seen = {}
   if cur and cur.done ~= "play" and cur.character then
@@ -286,10 +286,10 @@ function WoWdle.RefreshGuild()
     }
     seen[cur.character] = true
   end
-  local bucket = cur and WoWdleDB.guild[cur.date]
+  local bucket = cur and LeywordDB.guild[cur.date]
   if bucket then
     for sender, info in pairs(bucket) do
-      if not seen[sender] and not WoWdle.IsSelf(sender) then
+      if not seen[sender] and not Leyword.IsSelf(sender) then
         rows[#rows + 1] = {
           name = ShortName(sender),
           sort = sender,
@@ -329,7 +329,7 @@ function WoWdle.RefreshGuild()
 end
 
 local function Build()
-  local frame = CreateFrame("Frame", "WoWdleFrame", UIParent, "BasicFrameTemplateWithInset")
+  local frame = CreateFrame("Frame", "LeywordFrame", UIParent, "BasicFrameTemplateWithInset")
   frame:SetSize(440, 600)
   frame:SetFrameStrata("MEDIUM")
   frame:SetClampedToScreen(true)
@@ -340,9 +340,9 @@ local function Build()
   frame:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
     local point, _, relativePoint, x, y = self:GetPoint(1)
-    WoWdleDB.settings.point = { point, relativePoint, x, y }
+    LeywordDB.settings.point = { point, relativePoint, x, y }
   end)
-  local saved = WoWdleDB.settings.point
+  local saved = LeywordDB.settings.point
   if type(saved) == "table" and saved[1] and saved[2] then
     frame:ClearAllPoints()
     frame:SetPoint(saved[1], UIParent, saved[2], saved[3] or 0, saved[4] or 0)
@@ -355,13 +355,13 @@ local function Build()
       frame.TitleText:SetFont("Fonts\\MORPHEUS.ttf", 16, "")
     end
   end
-  AddEscape("WoWdleFrame")
+  AddEscape("LeywordFrame")
   local anchor = frame.Inset or frame
-  local puzzleTab = CreateFrame("Button", "WoWdlePuzzleTab", anchor, "UIPanelButtonTemplate")
+  local puzzleTab = CreateFrame("Button", "LeywordPuzzleTab", anchor, "UIPanelButtonTemplate")
   puzzleTab:SetSize(90, 22)
   puzzleTab:SetPoint("TOPLEFT", anchor, "TOPLEFT", 12, -8)
   puzzleTab:SetText("Puzzle")
-  local guildTab = CreateFrame("Button", "WoWdleGuildTab", anchor, "UIPanelButtonTemplate")
+  local guildTab = CreateFrame("Button", "LeywordGuildTab", anchor, "UIPanelButtonTemplate")
   guildTab:SetSize(90, 22)
   guildTab:SetPoint("LEFT", puzzleTab, "RIGHT", 6, 0)
   guildTab:SetText("Guild")
@@ -380,7 +380,7 @@ local function Build()
   for row = 1, 6 do
     tiles[row] = {}
     for col = 1, 5 do
-      local tile = CreateFrame("Frame", "WoWdleTile_" .. row .. "_" .. col, board, "BackdropTemplate")
+      local tile = CreateFrame("Frame", "LeywordTile_" .. row .. "_" .. col, board, "BackdropTemplate")
       tile:SetSize(36, 36)
       tile:SetPoint("TOPLEFT", board, "TOP", -98 + (col - 1) * 40, -26 - (row - 1) * 40)
       tile:SetBackdrop({
@@ -401,26 +401,26 @@ local function Build()
   local result = board:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
   result:SetPoint("TOP", status, "BOTTOM", 0, -1)
 
-  local box = CreateFrame("EditBox", "WoWdleGuessBox", board, "InputBoxTemplate")
+  local box = CreateFrame("EditBox", "LeywordGuessBox", board, "InputBoxTemplate")
   box:SetSize(110, 22)
   box:SetPoint("TOP", board, "TOP", -96, -296)
   box:SetAutoFocus(false)
   box:SetMaxLetters(5)
   box:SetFontObject(GameFontHighlight)
-  local back = CreateFrame("Button", "WoWdleBackButton", board, "UIPanelButtonTemplate")
+  local back = CreateFrame("Button", "LeywordBackButton", board, "UIPanelButtonTemplate")
   back:SetSize(50, 22)
   back:SetPoint("LEFT", box, "RIGHT", 6, 0)
   back:SetText("Back")
-  local submit = CreateFrame("Button", "WoWdleSubmitButton", board, "UIPanelButtonTemplate")
+  local submit = CreateFrame("Button", "LeywordSubmitButton", board, "UIPanelButtonTemplate")
   submit:SetSize(58, 22)
   submit:SetPoint("LEFT", back, "RIGHT", 4, 0)
   submit:SetText("Enter")
-  local share = CreateFrame("Button", "WoWdleShareButton", board, "UIPanelButtonTemplate")
+  local share = CreateFrame("Button", "LeywordShareButton", board, "UIPanelButtonTemplate")
   share:SetSize(58, 22)
   share:SetPoint("LEFT", submit, "RIGHT", 4, 0)
   share:SetText("Share")
   share:Disable()
-  local menu = CreateFrame("Frame", "WoWdleShareMenu", frame, "BackdropTemplate")
+  local menu = CreateFrame("Frame", "LeywordShareMenu", frame, "BackdropTemplate")
   menu:SetSize(196, 58)
   menu:SetPoint("TOP", share, "BOTTOM", 0, -2)
   menu:SetFrameStrata("DIALOG")
@@ -455,7 +455,7 @@ local function Build()
       font:SetFontObject(GameFontNormalSmall)
     end
     button:SetScript("OnClick", function()
-      local err = WoWdle.ShareTo(kind)
+      local err = Leyword.ShareTo(kind)
       if err then
         status:SetText(err)
         return
@@ -476,7 +476,7 @@ local function Build()
     local origin = -math.floor(width / 2)
     for i = 1, #letters do
       local letter = letters:sub(i, i)
-      local key = CreateFrame("Button", "WoWdleKey_" .. letter, board, "UIPanelButtonTemplate")
+      local key = CreateFrame("Button", "LeywordKey_" .. letter, board, "UIPanelButtonTemplate")
       key:SetSize(26, 22)
       key:SetPoint("TOP", board, "TOP", origin + (i - 1) * 29, keyY[r])
       key:SetText(letter)
@@ -485,7 +485,7 @@ local function Build()
         label:SetFontObject(GameFontNormalSmall)
       end
       key:SetScript("OnClick", function()
-        local cur = WoWdleDB.current
+        local cur = LeywordDB.current
         if cur and cur.done ~= "play" then
           return
         end
@@ -496,10 +496,10 @@ local function Build()
     end
   end
 
-  local hardMode = CreateFrame("CheckButton", "WoWdleHardModeCheck", board, "UICheckButtonTemplate")
+  local hardMode = CreateFrame("CheckButton", "LeywordHardModeCheck", board, "UICheckButtonTemplate")
   hardMode:SetPoint("TOPLEFT", board, "TOPLEFT", 48, -406)
   CheckText(hardMode, "Hard mode")
-  local colorblind = CreateFrame("CheckButton", "WoWdleColorblindCheck", board, "UICheckButtonTemplate")
+  local colorblind = CreateFrame("CheckButton", "LeywordColorblindCheck", board, "UICheckButtonTemplate")
   colorblind:SetPoint("LEFT", hardMode, "RIGHT", 110, 0)
   CheckText(colorblind, "Colorblind")
   local stats = board:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -508,7 +508,7 @@ local function Build()
   local guildNote = guild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   guildNote:SetPoint("TOPLEFT", 8, -2)
   guildNote:SetText("Today")
-  local scroll = CreateFrame("ScrollFrame", "WoWdleGuildScroll", guild, "UIPanelScrollFrameTemplate")
+  local scroll = CreateFrame("ScrollFrame", "LeywordGuildScroll", guild, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 4, -22)
   scroll:SetPoint("BOTTOMRIGHT", -26, 4)
   local content = CreateFrame("Frame", nil, scroll)
@@ -537,15 +537,15 @@ local function Build()
   end
 
   local function Submit()
-    local err = WoWdle.SubmitGuess(box:GetText() or "")
+    local err = Leyword.SubmitGuess(box:GetText() or "")
     if err then
       status:SetText(err)
       return
     end
     status:SetText("")
     box:SetText("")
-    WoWdle.draft = ""
-    WoWdle.Refresh()
+    Leyword.draft = ""
+    Leyword.Refresh()
   end
 
   box:SetScript("OnTextChanged", function(self)
@@ -554,9 +554,9 @@ local function Build()
       self:SetText(text)
       return
     end
-    WoWdle.draft = text
-    if WoWdle.frames then
-      WoWdle.Refresh()
+    Leyword.draft = text
+    if Leyword.frames then
+      Leyword.Refresh()
     end
   end)
   box:SetScript("OnEnterPressed", Submit)
@@ -571,36 +571,36 @@ local function Build()
   end)
   submit:SetScript("OnClick", Submit)
   share:SetScript("OnClick", function()
-    if WoWdleDB.current and WoWdleDB.current.done ~= "win" then
+    if LeywordDB.current and LeywordDB.current.done ~= "win" then
       return
     end
     menu:SetShown(not menu:IsShown())
   end)
   hardMode:SetScript("OnClick", function(self)
-    local cur = WoWdle.EnsureToday()
+    local cur = Leyword.EnsureToday()
     if #cur.guesses > 0 then
       self:SetChecked(cur.hardMode and true or false)
       return
     end
-    WoWdleDB.settings.hardMode = self:GetChecked() and true or false
+    LeywordDB.settings.hardMode = self:GetChecked() and true or false
   end)
   colorblind:SetScript("OnClick", function(self)
-    WoWdleDB.settings.colorblind = self:GetChecked() and true or false
-    WoWdle.Refresh()
+    LeywordDB.settings.colorblind = self:GetChecked() and true or false
+    Leyword.Refresh()
   end)
 
   local function ShowPage(which)
-    WoWdle.page = which
+    Leyword.page = which
     if which ~= "puzzle" then
       menu:Hide()
     end
     board:SetShown(which == "puzzle")
     guild:SetShown(which == "guild")
-    if WoWdle.SyncEllesmereTabs then
-      WoWdle.SyncEllesmereTabs(which)
+    if Leyword.SyncEllesmereTabs then
+      Leyword.SyncEllesmereTabs(which)
     end
-    if which == "guild" and WoWdle.RequestSync then
-      WoWdle.RequestSync()
+    if which == "guild" and Leyword.RequestSync then
+      Leyword.RequestSync()
     end
   end
   puzzleTab:SetScript("OnClick", function()
@@ -610,7 +610,7 @@ local function Build()
     ShowPage("guild")
   end)
 
-  WoWdle.frames = {
+  Leyword.frames = {
     main = frame,
     inset = anchor,
     board = board,
@@ -636,29 +636,29 @@ local function Build()
     guildRows = guildRows,
     guildEmpty = empty,
   }
-  WoWdle.draft = ""
+  Leyword.draft = ""
   frame:SetScript("OnShow", function()
-    WoWdle.Refresh()
+    Leyword.Refresh()
   end)
-  WoWdle.framesBuilt = true
-  if WoWdle.ApplyBuiltinSkins then
-    WoWdle.ApplyBuiltinSkins()
+  Leyword.framesBuilt = true
+  if Leyword.ApplyBuiltinSkins then
+    Leyword.ApplyBuiltinSkins()
   end
-  if WoWdle.ApplyEllesmere then
-    WoWdle.ApplyEllesmere()
+  if Leyword.ApplyEllesmere then
+    Leyword.ApplyEllesmere()
   end
-  if WoWdle.RunSkinCallbacks then
-    WoWdle.RunSkinCallbacks()
+  if Leyword.RunSkinCallbacks then
+    Leyword.RunSkinCallbacks()
   end
   ShowPage("puzzle")
   frame:Hide()
 end
 
-function WoWdle.Toggle()
-  if not WoWdle.frames then
+function Leyword.Toggle()
+  if not Leyword.frames then
     Build()
   end
-  local frame = WoWdle.frames.main
+  local frame = Leyword.frames.main
   if frame:IsShown() then
     frame:Hide()
   else

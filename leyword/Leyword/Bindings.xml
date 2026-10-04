@@ -1,0 +1,5 @@
+<Bindings>
+  <Binding name="LEYWORD_TOGGLE" category="Leyword">
+    Leyword_Toggle()
+  </Binding>
+</Bindings>

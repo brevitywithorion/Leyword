@@ -13,7 +13,7 @@ import {
   shareChat,
   type Done,
   type Stats,
-} from "@/lib/wowdle";
+} from "@/lib/leyword";
 
 type Save = {
   date: string;
@@ -53,7 +53,7 @@ function blankSave(now = new Date()): Save {
 function loadSave(): Save {
   const fresh = blankSave();
   try {
-    const raw = localStorage.getItem("wowdle");
+    const raw = localStorage.getItem("leyword");
     if (!raw) return fresh;
     const parsed = JSON.parse(raw) as Partial<Save>;
     const stats = {
@@ -83,7 +83,7 @@ function loadSave(): Save {
   }
 }
 
-export function WoWdleApp() {
+export function LeywordApp() {
   const [save, setSave] = useState<Save>(() => blankSave());
   const [draft, setDraft] = useState("");
   const [message, setMessage] = useState("");
@@ -97,7 +97,7 @@ export function WoWdleApp() {
     setSave(loadSave());
     setReady(true);
     try {
-      const raw = localStorage.getItem("wowdle-words");
+      const raw = localStorage.getItem("leyword-words");
       if (raw) {
         const parsed = JSON.parse(raw) as { answers?: string[]; guesses?: string[] };
         setExtras({ answers: parsed.answers ?? [], guesses: parsed.guesses ?? [] });
@@ -109,11 +109,11 @@ export function WoWdleApp() {
   }, []);
 
   useEffect(() => {
-    if (ready) localStorage.setItem("wowdle", JSON.stringify(save));
+    if (ready) localStorage.setItem("leyword", JSON.stringify(save));
   }, [save, ready]);
 
   useEffect(() => {
-    if (wordsReady) localStorage.setItem("wowdle-words", JSON.stringify(extras));
+    if (wordsReady) localStorage.setItem("leyword-words", JSON.stringify(extras));
   }, [extras, wordsReady]);
 
   const number = puzzleNumber(save.y, save.m, save.d);
@@ -367,12 +367,12 @@ export function WoWdleApp() {
         )}
 
         <div className="download">
-          <a className="wow-button" href="/wowdle.zip" download="WoWdle.zip">
+          <a className="wow-button" href="/leyword.zip" download="Leyword.zip">
             Download addon
           </a>
         </div>
         <p className="install">
-          Close WoW Forever, unzip into the game's Interface\AddOns folder, then log in and type /wowdle. Add words in CustomWords.lua and /reload. EllesmereUI skins the window on its own.
+          Close WoW Forever, unzip into the game's Interface\AddOns folder, then log in and type /leyword. Add words in CustomWords.lua and /reload. EllesmereUI skins the window on its own.
         </p>
         <div className="words">
           <label className="wow-button">

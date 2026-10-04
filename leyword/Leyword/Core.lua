@@ -1,4 +1,4 @@
-WoWdle = WoWdle or {}
+Leyword = Leyword or {}
 
 local DEFAULTS = {
   settings = {
@@ -33,13 +33,13 @@ local function CopyDefaults(dst, src)
   end
 end
 
-function WoWdle.InitDB()
-  if type(WoWdleDB) ~= "table" then
-    WoWdleDB = {}
+function Leyword.InitDB()
+  if type(LeywordDB) ~= "table" then
+    LeywordDB = {}
   end
-  CopyDefaults(WoWdleDB, DEFAULTS)
-  if type(WoWdleDB.stats.dist) ~= "table" or #WoWdleDB.stats.dist < 6 then
-    WoWdleDB.stats.dist = { 0, 0, 0, 0, 0, 0 }
+  CopyDefaults(LeywordDB, DEFAULTS)
+  if type(LeywordDB.stats.dist) ~= "table" or #LeywordDB.stats.dist < 6 then
+    LeywordDB.stats.dist = { 0, 0, 0, 0, 0, 0 }
   end
 end
 
@@ -47,34 +47,34 @@ local loader = CreateFrame("Frame")
 loader:RegisterEvent("ADDON_LOADED")
 loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function(_, event, arg1)
-  if event == "ADDON_LOADED" and arg1 == "WoWdle" then
-    WoWdle.InitDB()
-    if WoWdle.PruneGuild then
-      WoWdle.PruneGuild()
+  if event == "ADDON_LOADED" and arg1 == "Leyword" then
+    Leyword.InitDB()
+    if Leyword.PruneGuild then
+      Leyword.PruneGuild()
     end
     loader:UnregisterEvent("ADDON_LOADED")
   elseif event == "PLAYER_LOGIN" then
-    pcall(C_ChatInfo.RegisterAddonMessagePrefix, "WOWDLE")
-    if WoWdle.RequestSync then
-      WoWdle.RequestSync()
+    pcall(C_ChatInfo.RegisterAddonMessagePrefix, "LEYWORD")
+    if Leyword.RequestSync then
+      Leyword.RequestSync()
     end
   end
 end)
 
-function WoWdle_Toggle()
-  if not WoWdleDB then
-    WoWdle.InitDB()
+function Leyword_Toggle()
+  if not LeywordDB then
+    Leyword.InitDB()
   end
-  if WoWdle.Toggle then
-    WoWdle.Toggle()
+  if Leyword.Toggle then
+    Leyword.Toggle()
   end
 end
 
-function WoWdle_CompartmentClick()
-  WoWdle_Toggle()
+function Leyword_CompartmentClick()
+  Leyword_Toggle()
 end
 
-function WoWdle_CompartmentEnter(a, b)
+function Leyword_CompartmentEnter(a, b)
   local owner = a
   if type(a) ~= "table" then
     owner = b
@@ -89,28 +89,28 @@ function WoWdle_CompartmentEnter(a, b)
   GameTooltip:Show()
 end
 
-function WoWdle_CompartmentLeave()
+function Leyword_CompartmentLeave()
   GameTooltip:Hide()
 end
 
-SLASH_WOWDLE1 = "/wowdle"
-SLASH_WOWDLE2 = "/wd"
-SlashCmdList.WOWDLE = function(msg)
-  if not WoWdleDB then
-    WoWdle.InitDB()
+SLASH_LEYWORD1 = "/leyword"
+SLASH_LEYWORD2 = "/lw"
+SlashCmdList.LEYWORD = function(msg)
+  if not LeywordDB then
+    Leyword.InitDB()
   end
   msg = string.lower(msg or ""):gsub("^%s+", ""):gsub("%s+$", "")
   if msg == "noskin" then
-    WoWdleDB.settings.useUISkin = false
+    LeywordDB.settings.useUISkin = false
     print("|cffd4a85aLeyword|r will keep the Blizzard frame after you reload. EllesmereUI still follows its own skin toggle.")
     return
   elseif msg == "skin" then
-    WoWdleDB.settings.useUISkin = true
+    LeywordDB.settings.useUISkin = true
     print("|cffd4a85aLeyword|r will match ElvUI and Tukui after you reload.")
     return
   elseif msg == "test" then
-    WoWdle.SelfTest()
+    Leyword.SelfTest()
     return
   end
-  WoWdle_Toggle()
+  Leyword_Toggle()
 end

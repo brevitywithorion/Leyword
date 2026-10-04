@@ -1,9 +1,9 @@
 -- Guild transport. Score and colored grid only. Guessed words are never sent.
 -- Messages stay under the 255 byte addon cap and are queued at one every 1.5s
 -- so a sync cannot trip the client throttle.
-WoWdle = WoWdle or {}
+Leyword = Leyword or {}
 
-local PREFIX = "WOWDLE"
+local PREFIX = "LEYWORD"
 local queue = {}
 local timerArmed = false
 
@@ -38,7 +38,7 @@ local function Arm(delay)
   end)
 end
 
-function WoWdle.Enqueue(msg, chat, target)
+function Leyword.Enqueue(msg, chat, target)
   if type(msg) ~= "string" or #msg > 250 or #queue >= 30 then
     return false
   end
@@ -55,7 +55,7 @@ local function MyName()
   return (name or "") .. "-" .. (realm or "")
 end
 
-function WoWdle.IsSelf(sender)
+function Leyword.IsSelf(sender)
   local full = MyName()
   if sender == full then
     return true
@@ -70,23 +70,23 @@ function WoWdle.IsSelf(sender)
   return false
 end
 
-function WoWdle.PruneGuild()
-  if type(WoWdleDB) ~= "table" or type(WoWdleDB.guild) ~= "table" then
+function Leyword.PruneGuild()
+  if type(LeywordDB) ~= "table" or type(LeywordDB.guild) ~= "table" then
     return
   end
-  local ok, y, m, d = pcall(WoWdle.Today)
+  local ok, y, m, d = pcall(Leyword.Today)
   if not ok or not y or not d then
     return
   end
-  local today = WoWdle.Rdn(y, m, d)
-  for key in pairs(WoWdleDB.guild) do
+  local today = Leyword.Rdn(y, m, d)
+  for key in pairs(LeywordDB.guild) do
     local yy, mm, dd = tostring(key):match("^(%d%d%d%d)(%d%d)(%d%d)$")
     if not yy then
-      WoWdleDB.guild[key] = nil
+      LeywordDB.guild[key] = nil
     else
-      local age = today - WoWdle.Rdn(tonumber(yy), tonumber(mm), tonumber(dd))
+      local age = today - Leyword.Rdn(tonumber(yy), tonumber(mm), tonumber(dd))
       if age > 14 or age < -1 then
-        WoWdleDB.guild[key] = nil
+        LeywordDB.guild[key] = nil
       end
     end
   end
@@ -98,30 +98,30 @@ local function ResultMessage(cur)
   return string.format("1|R|%s|%s|%s|%s", cur.date, score, won, table.concat(cur.states))
 end
 
-function WoWdle.BroadcastResult()
-  local cur = WoWdleDB.current
+function Leyword.BroadcastResult()
+  local cur = LeywordDB.current
   if not cur or cur.done == "play" or not IsInGuild() then
     return
   end
   local msg = ResultMessage(cur)
-  if WoWdle.Enqueue(msg, "GUILD") then
+  if Leyword.Enqueue(msg, "GUILD") then
     cur.shared = true
   end
 end
 
-function WoWdle.RequestSync()
+function Leyword.RequestSync()
   if not IsInGuild() then
     return
   end
   local now = time()
-  if (now - (WoWdleDB.lastQuery or 0)) >= 300 then
-    WoWdleDB.lastQuery = now
-    local cur = WoWdle.EnsureToday()
-    WoWdle.Enqueue("1|Q|" .. cur.date, "GUILD")
+  if (now - (LeywordDB.lastQuery or 0)) >= 300 then
+    LeywordDB.lastQuery = now
+    local cur = Leyword.EnsureToday()
+    Leyword.Enqueue("1|Q|" .. cur.date, "GUILD")
   end
-  local cur = WoWdleDB.current
+  local cur = LeywordDB.current
   if cur and cur.done ~= "play" and not cur.shared then
-    WoWdle.BroadcastResult()
+    Leyword.BroadcastResult()
   end
 end
 
@@ -148,19 +148,19 @@ local function StoreResult(sender, ymd, score, won, pattern)
   elseif scoreNum ~= 0 or rows ~= 6 or pattern:sub(-5) == "GGGGG" then
     return
   end
-  local py, pm, pd = WoWdle.ParseKey(ymd)
+  local py, pm, pd = Leyword.ParseKey(ymd)
   if not py then
     return
   end
-  local ok, ty, tm, td = pcall(WoWdle.Today)
+  local ok, ty, tm, td = pcall(Leyword.Today)
   if ok and ty then
-    local age = WoWdle.Rdn(ty, tm, td) - WoWdle.Rdn(py, pm, pd)
+    local age = Leyword.Rdn(ty, tm, td) - Leyword.Rdn(py, pm, pd)
     if age > 14 or age < -1 then
       return
     end
   end
-  WoWdleDB.guild[ymd] = WoWdleDB.guild[ymd] or {}
-  local bucket = WoWdleDB.guild[ymd]
+  LeywordDB.guild[ymd] = LeywordDB.guild[ymd] or {}
+  local bucket = LeywordDB.guild[ymd]
   if not bucket[sender] then
     local n = 0
     for _ in pairs(bucket) do
@@ -176,26 +176,26 @@ local function StoreResult(sender, ymd, score, won, pattern)
     pattern = pattern,
     t = time(),
   }
-  if WoWdle.Refresh then
-    WoWdle.Refresh()
+  if Leyword.Refresh then
+    Leyword.Refresh()
   end
 end
 
 local function ReplyTo(sender, ymd)
-  if WoWdle.IsSelf(sender) then
+  if Leyword.IsSelf(sender) then
     return
   end
-  local cur = WoWdleDB.current
+  local cur = LeywordDB.current
   if not cur or cur.date ~= ymd or cur.done == "play" then
     return
   end
-  WoWdle._replied = WoWdle._replied or {}
+  Leyword._replied = Leyword._replied or {}
   local key = sender .. ":" .. ymd
-  if WoWdle._replied[key] then
+  if Leyword._replied[key] then
     return
   end
-  WoWdle._replied[key] = true
-  WoWdle.Enqueue(ResultMessage(cur), "WHISPER", sender)
+  Leyword._replied[key] = true
+  Leyword.Enqueue(ResultMessage(cur), "WHISPER", sender)
 end
 
 local function OnAddonMessage(_, message, distribution, sender)

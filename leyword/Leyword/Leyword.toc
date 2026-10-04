@@ -3,13 +3,13 @@
 ## Notes: One five-letter puzzle each realm day. Guildmates see your score and grid, never the words.
 ## Author: Orion Wills
 ## Version: 1.0.0
-## SavedVariables: WoWdleDB
+## SavedVariables: LeywordDB
 ## OptionalDeps: EllesmereUI, ElvUI, Tukui
 ## IconTexture: Interface\Icons\INV_Misc_Book_09
 ## Category: Miscellaneous
-## AddonCompartmentFunc: WoWdle_CompartmentClick
-## AddonCompartmentFuncOnEnter: WoWdle_CompartmentEnter
-## AddonCompartmentFuncOnLeave: WoWdle_CompartmentLeave
+## AddonCompartmentFunc: Leyword_CompartmentClick
+## AddonCompartmentFuncOnEnter: Leyword_CompartmentEnter
+## AddonCompartmentFuncOnLeave: Leyword_CompartmentLeave
 
 Words.lua
 CustomWords.lua

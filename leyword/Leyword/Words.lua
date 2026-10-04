@@ -1,6 +1,6 @@
 -- Generated. This order is the puzzle order. Do not sort it again.
-WoWdle = WoWdle or {}
-WoWdle.Answers = {
+Leyword = Leyword or {}
+Leyword.Answers = {
   "about",
   "above",
   "abuse",
@@ -21468,7 +21468,7 @@ local guesses = {
   "zymin",
 }
 
-WoWdle.GuessSet = {}
+Leyword.GuessSet = {}
 for i = 1, #guesses do
-  WoWdle.GuessSet[guesses[i]] = true
+  Leyword.GuessSet[guesses[i]] = true
 end

@@ -265,8 +265,8 @@ if (answerSet.bad.length) {
 }
 
 const lua = `-- Generated. This order is the puzzle order. Do not sort it again.
-WoWdle = WoWdle or {}
-WoWdle.Answers = {
+Leyword = Leyword or {}
+Leyword.Answers = {
 ${answerSet.out.map((w) => `  "${w}",`).join("\n")}
 }
 
@@ -274,9 +274,9 @@ local guesses = {
 ${guesses.map((w) => `  "${w}",`).join("\n")}
 }
 
-WoWdle.GuessSet = {}
+Leyword.GuessSet = {}
 for i = 1, #guesses do
-  WoWdle.GuessSet[guesses[i]] = true
+  Leyword.GuessSet[guesses[i]] = true
 end
 `;
 
@@ -290,8 +290,8 @@ ${guesses.map((w) => `  "${w}",`).join("\n")}
 ];
 `;
 
-mkdirSync("/workspace/wowdle/WoWdle", { recursive: true });
+mkdirSync("/workspace/leyword/Leyword", { recursive: true });
 mkdirSync("/workspace/src/lib", { recursive: true });
-writeFileSync("/workspace/wowdle/WoWdle/Words.lua", lua);
+writeFileSync("/workspace/leyword/Leyword/Words.lua", lua);
 writeFileSync("/workspace/src/lib/words.ts", ts);
 console.log(`answers ${answerSet.out.length} guesses ${guesses.length}`);

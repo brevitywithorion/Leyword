@@ -1,35 +1,35 @@
 -- Reskin contract for ElvUI, Tukui, and anything else.
 --
--- WoWdle.RegisterSkin(function(frames) end) runs after the window exists.
--- EventRegistry:RegisterCallback("WoWdle.Skin", function(_, frames) end) does too.
--- WoWdle.GetFrames() returns nil until the window has been opened once.
+-- Leyword.RegisterSkin(function(frames) end) runs after the window exists.
+-- EventRegistry:RegisterCallback("Leyword.Skin", function(_, frames) end) does too.
+-- Leyword.GetFrames() returns nil until the window has been opened once.
 --
 -- frames.main, guessBox, submit, share, back, puzzleTab, guildTab,
 -- hardMode, colorblind, guildScroll, tiles[row][col], keys[letter]
 --
--- Named frames: WoWdleFrame, WoWdleGuessBox, WoWdleSubmitButton,
--- WoWdleShareButton, WoWdleBackButton, WoWdleGuildScroll,
--- WoWdleHardModeCheck, WoWdleColorblindCheck, WoWdleTile_1_1 .. WoWdleTile_6_5
+-- Named frames: LeywordFrame, LeywordGuessBox, LeywordSubmitButton,
+-- LeywordShareButton, LeywordBackButton, LeywordGuildScroll,
+-- LeywordHardModeCheck, LeywordColorblindCheck, LeywordTile_1_1 .. LeywordTile_6_5
 --
 -- Templates: BasicFrameTemplateWithInset, UIPanelButtonTemplate,
 -- InputBoxTemplate, UICheckButtonTemplate, UIPanelScrollFrameTemplate, BackdropTemplate.
--- Replace WoWdle.ApplyTile(tile, letter, mark) to paint tiles yourself.
+-- Replace Leyword.ApplyTile(tile, letter, mark) to paint tiles yourself.
 -- Mark is nil, "G", "Y", or "B". LibSharedMedia is not required.
-WoWdle = WoWdle or {}
+Leyword = Leyword or {}
 
 local callbacks = {}
 
-function WoWdle.GetFrames()
-  return WoWdle.frames
+function Leyword.GetFrames()
+  return Leyword.frames
 end
 
-function WoWdle.RegisterSkin(fn)
+function Leyword.RegisterSkin(fn)
   if type(fn) ~= "function" then
     return
   end
   callbacks[#callbacks + 1] = fn
-  if WoWdle.framesBuilt and WoWdle.frames then
-    pcall(fn, WoWdle.frames)
+  if Leyword.framesBuilt and Leyword.frames then
+    pcall(fn, Leyword.frames)
   end
 end
 
@@ -39,9 +39,9 @@ local function Try(fn, ...)
   end
 end
 
-function WoWdle.ApplyBuiltinSkins()
-  local frames = WoWdle.frames
-  if not frames or not WoWdleDB or WoWdleDB.settings.useUISkin == false then
+function Leyword.ApplyBuiltinSkins()
+  local frames = Leyword.frames
+  if not frames or not LeywordDB or LeywordDB.settings.useUISkin == false then
     return
   end
   local loaded = C_AddOns and C_AddOns.IsAddOnLoaded
@@ -65,7 +65,7 @@ function WoWdle.ApplyBuiltinSkins()
         Try(skins.HandleCloseButton, skins, frames.main.CloseButton)
         Try(skins.HandleCheckBox, skins, frames.hardMode)
         Try(skins.HandleCheckBox, skins, frames.colorblind)
-        Try(skins.HandleScrollBar, skins, _G.WoWdleGuildScrollScrollBar)
+        Try(skins.HandleScrollBar, skins, _G.LeywordGuildScrollScrollBar)
       end
     end
   end
@@ -89,8 +89,8 @@ function WoWdle.ApplyBuiltinSkins()
   end
 end
 
-function WoWdle.RunSkinCallbacks()
-  local frames = WoWdle.frames
+function Leyword.RunSkinCallbacks()
+  local frames = Leyword.frames
   if not frames then
     return
   end
@@ -98,13 +98,13 @@ function WoWdle.RunSkinCallbacks()
     pcall(callbacks[i], frames)
   end
   if EventRegistry and EventRegistry.TriggerEvent then
-    pcall(EventRegistry.TriggerEvent, EventRegistry, "WoWdle.Skin", frames)
+    pcall(EventRegistry.TriggerEvent, EventRegistry, "Leyword.Skin", frames)
   end
 end
 
-function WoWdle.SyncEllesmereTabs(which)
-  local skin = WoWdle.Ellesmere
-  local frames = WoWdle.frames
+function Leyword.SyncEllesmereTabs(which)
+  local skin = Leyword.Ellesmere
+  local frames = Leyword.frames
   if not skin or not frames or type(skin.SetTabSelection) ~= "function" then
     return
   end
@@ -115,9 +115,9 @@ function WoWdle.SyncEllesmereTabs(which)
   pcall(skin.SetTabSelection, frames.guildTab, which == "guild")
 end
 
-function WoWdle.ApplyEllesmere(skin)
-  skin = skin or WoWdle.Ellesmere
-  local frames = WoWdle.frames
+function Leyword.ApplyEllesmere(skin)
+  skin = skin or Leyword.Ellesmere
+  local frames = Leyword.frames
   if not skin or not frames then
     return
   end
@@ -151,34 +151,34 @@ function WoWdle.ApplyEllesmere(skin)
   call("Checkbox", frames.colorblind)
   call("Tab", frames.puzzleTab)
   call("Tab", frames.guildTab)
-  call("ScrollBar", frames.guildScroll.ScrollBar or _G.WoWdleGuildScrollScrollBar)
+  call("ScrollBar", frames.guildScroll.ScrollBar or _G.LeywordGuildScrollScrollBar)
   call("Font", frames.number)
   call("Font", frames.status)
   call("Font", frames.result)
   call("Font", frames.stats)
   call("Font", frames.guildEmpty)
-  if not WoWdle._ellesmereLooks and type(skin.OnLooksChanged) == "function" then
-    WoWdle._ellesmereLooks = true
+  if not Leyword._ellesmereLooks and type(skin.OnLooksChanged) == "function" then
+    Leyword._ellesmereLooks = true
     pcall(skin.OnLooksChanged, function()
-      if WoWdle.Refresh and WoWdle.frames and WoWdle.frames.main:IsShown() then
-        WoWdle.Refresh()
+      if Leyword.Refresh and Leyword.frames and Leyword.frames.main:IsShown() then
+        Leyword.Refresh()
       end
     end)
   end
-  WoWdle.SyncEllesmereTabs(WoWdle.page or "puzzle")
+  Leyword.SyncEllesmereTabs(Leyword.page or "puzzle")
 end
 
 local function RegisterEllesmere()
-  if WoWdle._ellesmereRegistered then
+  if Leyword._ellesmereRegistered then
     return
   end
   if not (EllesmereUI and type(EllesmereUI.RegisterSkin) == "function") then
     return
   end
-  WoWdle._ellesmereRegistered = true
-  EllesmereUI.RegisterSkin("WoWdle", function(skin)
-    WoWdle.Ellesmere = skin
-    WoWdle.ApplyEllesmere(skin)
+  Leyword._ellesmereRegistered = true
+  EllesmereUI.RegisterSkin("Leyword", function(skin)
+    Leyword.Ellesmere = skin
+    Leyword.ApplyEllesmere(skin)
   end)
 end
 

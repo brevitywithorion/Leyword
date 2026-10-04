@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { answers, guessList } from "./words.ts";
-import { answerFor, buildLists, hardViolation, parseWordList, puzzleNumber, scoreGuess } from "./wowdle.ts";
+import { answerFor, buildLists, hardViolation, parseWordList, puzzleNumber, scoreGuess } from "./leyword.ts";
 
 test("puzzle number matches the realm-day count", () => {
   assert.equal(puzzleNumber(2026, 1, 1), 1);

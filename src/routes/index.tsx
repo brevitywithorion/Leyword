@@ -1,4 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { WoWdleApp } from "@/components/wowdle-app";
+import { LeywordApp } from "@/components/leyword-app";
 
-export const Route = createFileRoute("/")({ component: WoWdleApp });
+export const Route = createFileRoute("/")({ component: LeywordApp });
