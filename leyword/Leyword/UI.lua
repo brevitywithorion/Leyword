@@ -334,7 +334,9 @@ end
 local function Build()
   local frame = CreateFrame("Frame", "LeywordFrame", UIParent, "BasicFrameTemplateWithInset")
   frame:SetSize(470, 700)
-  frame:SetFrameStrata("MEDIUM")
+  frame:SetFrameStrata("DIALOG")
+  frame:SetFrameLevel(200)
+  frame:SetToplevel(true)
   frame:SetClampedToScreen(true)
   frame:SetMovable(true)
   frame:EnableMouse(true)
@@ -671,5 +673,6 @@ function Leyword.Toggle()
     frame:Hide()
   else
     frame:Show()
+    frame:Raise()
   end
 end
