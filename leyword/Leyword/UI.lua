@@ -30,11 +30,14 @@ function Leyword.ApplyTile(tile, letter, mark)
   if color then
     tile:SetBackdropColor(color[1], color[2], color[3], 1)
     tile:SetBackdropBorderColor(color[1] * 0.55, color[2] * 0.55, color[3] * 0.55, 1)
-    tile.letter:SetTextColor(0.96, 0.94, 0.88)
+    tile.letter:SetTextColor(0.98, 0.96, 0.9)
+  elseif letter and letter ~= "" then
+    tile:SetBackdropColor(0.32, 0.24, 0.14, 1)
+    tile:SetBackdropBorderColor(0.95, 0.78, 0.38, 1)
+    tile.letter:SetTextColor(1, 0.96, 0.82)
   else
     tile:SetBackdropColor(0.18, 0.13, 0.08, 0.55)
     tile:SetBackdropBorderColor(0.45, 0.36, 0.22, 1)
-    tile.letter:SetTextColor(0.28, 0.2, 0.12)
   end
 end
 
@@ -54,7 +57,7 @@ function Leyword.ApplyKey(button, mark)
       tex:SetVertexColor(1, 1, 1)
     end
     if label then
-      label:SetFontObject(GameFontNormalSmall)
+      label:SetTextColor(1, 0.95, 0.78)
     end
   end
 end
@@ -410,6 +413,7 @@ local function Build()
   box:SetAutoFocus(false)
   box:SetMaxLetters(5)
   box:SetFontObject(GameFontHighlight)
+  box:SetTextColor(1, 0.96, 0.82)
   local back = CreateFrame("Button", "LeywordBackButton", board, "UIPanelButtonTemplate")
   back:SetSize(50, 22)
   back:SetPoint("LEFT", box, "RIGHT", 6, 0)
@@ -558,6 +562,7 @@ local function Build()
       return
     end
     Leyword.draft = text
+    self:SetTextColor(1, 0.96, 0.82)
     if Leyword.frames then
       Leyword.Refresh()
     end
