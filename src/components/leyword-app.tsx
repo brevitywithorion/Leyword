@@ -25,7 +25,7 @@ type Save = {
   done: Done;
   recorded: boolean;
   hardMode: boolean;
-  settings: { hardMode: boolean; colorblind: boolean };
+  settings: { hardMode: boolean; colorblind: boolean; keyboard?: boolean };
   stats: Stats;
 };
 
@@ -45,7 +45,7 @@ function blankSave(now = new Date()): Save {
     done: "play",
     recorded: false,
     hardMode: false,
-    settings: { hardMode: false, colorblind: false },
+    settings: { hardMode: false, colorblind: false, keyboard: true },
     stats: emptyStats(),
   };
 }
@@ -255,7 +255,8 @@ export function LeywordApp() {
                 Enter
               </button>
             </form>
-            <div className="keys" aria-hidden="true">
+            {save.settings.keyboard !== false ? (
+            <div className="keys">
               {KEYS.map((row) => (
                 <div className="key-row" key={row}>
                   {row.split("").map((letter) => (
@@ -273,6 +274,7 @@ export function LeywordApp() {
                 </div>
               ))}
             </div>
+            ) : null}
             <div className="checks">
               <label className="check">
                 <input
@@ -294,6 +296,16 @@ export function LeywordApp() {
                   }
                 />
                 Colorblind
+              </label>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={save.settings.keyboard !== false}
+                  onChange={(event) =>
+                    setSave({ ...save, settings: { ...save.settings, keyboard: event.target.checked } })
+                  }
+                />
+                Keys
               </label>
             </div>
             <p className="stats">

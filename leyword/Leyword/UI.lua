@@ -248,6 +248,9 @@ function Leyword.Refresh()
   frames.hardMode:SetEnabled(not locked)
   frames.hardMode:SetChecked(locked and cur.hardMode or LeywordDB.settings.hardMode)
   frames.colorblind:SetChecked(LeywordDB.settings.colorblind)
+  local showKeys = LeywordDB.settings.keyboard ~= false
+  frames.keyboard:SetChecked(showKeys)
+  frames.keypad:SetShown(showKeys)
   if cur.done == "win" then
     frames.result:SetText("Solved in " .. #cur.guesses .. ".")
     frames.share:Enable()
@@ -476,6 +479,7 @@ local function Build()
     channels[i] = button
   end
 
+  local keypad = CreateFrame("Frame", nil, board)
   local keys = {}
   local keyRows = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" }
   local keyY = { -474, -500, -526 }
@@ -485,7 +489,7 @@ local function Build()
     local origin = -math.floor(width / 2)
     for i = 1, #letters do
       local letter = letters:sub(i, i)
-      local key = CreateFrame("Button", "LeywordKey_" .. letter, board, "UIPanelButtonTemplate")
+      local key = CreateFrame("Button", "LeywordKey_" .. letter, keypad, "UIPanelButtonTemplate")
       key:SetSize(26, 22)
       key:SetPoint("TOP", board, "TOP", origin + (i - 1) * 29, keyY[r])
       key:SetText(letter)
@@ -506,11 +510,16 @@ local function Build()
   end
 
   local hardMode = CreateFrame("CheckButton", "LeywordHardModeCheck", board, "UICheckButtonTemplate")
-  hardMode:SetPoint("TOPLEFT", board, "TOPLEFT", 48, -560)
+  hardMode:SetPoint("TOPLEFT", board, "TOPLEFT", 8, -560)
   CheckText(hardMode, "Hard mode")
   local colorblind = CreateFrame("CheckButton", "LeywordColorblindCheck", board, "UICheckButtonTemplate")
-  colorblind:SetPoint("LEFT", hardMode, "RIGHT", 110, 0)
+  colorblind:SetPoint("LEFT", hardMode, "RIGHT", 96, 0)
   CheckText(colorblind, "Colorblind")
+  local keyboard = CreateFrame("CheckButton", "LeywordKeyboardCheck", board, "UICheckButtonTemplate")
+  keyboard:SetPoint("LEFT", colorblind, "RIGHT", 112, 0)
+  CheckText(keyboard, "Keys")
+  keyboard:SetChecked(LeywordDB.settings.keyboard ~= false)
+  keypad:SetShown(LeywordDB.settings.keyboard ~= false)
   local stats = board:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
   stats:SetPoint("BOTTOM", board, "BOTTOM", 0, 8)
 
@@ -598,6 +607,11 @@ local function Build()
     LeywordDB.settings.colorblind = self:GetChecked() and true or false
     Leyword.Refresh()
   end)
+  keyboard:SetScript("OnClick", function(self)
+    local shown = self:GetChecked() and true or false
+    LeywordDB.settings.keyboard = shown
+    keypad:SetShown(shown)
+  end)
 
   local function ShowPage(which)
     Leyword.page = which
@@ -627,6 +641,7 @@ local function Build()
     guild = guild,
     tiles = tiles,
     keys = keys,
+    keypad = keypad,
     guessBox = box,
     submit = submit,
     share = share,
@@ -637,6 +652,7 @@ local function Build()
     guildTab = guildTab,
     hardMode = hardMode,
     colorblind = colorblind,
+    keyboard = keyboard,
     status = status,
     stats = stats,
     result = result,
