@@ -86,6 +86,7 @@ export function LeywordApp() {
   const [draft, setDraft] = useState("");
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState<"puzzle" | "guild">("puzzle");
+  const [note, setNote] = useState("");
   const [ready, setReady] = useState(false);
   const [extras, setExtras] = useState<{ answers: string[]; guesses: string[] }>({ answers: [], guesses: [] });
   const [wordsReady, setWordsReady] = useState(false);
@@ -379,6 +380,31 @@ export function LeywordApp() {
           </div>
         )}
 
+        <form
+          className="feedback"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const text = note.trim();
+            if (!text) return;
+            const body = encodeURIComponent(text);
+            window.location.href = `mailto:leyword@agentmail.to?subject=${encodeURIComponent("Leyword feedback")}&body=${body}`;
+          }}
+        >
+          <label className="sr-only" htmlFor="feedback">
+            Feedback
+          </label>
+          <textarea
+            id="feedback"
+            className="feedback-box"
+            maxLength={500}
+            value={note}
+            placeholder="Feedback"
+            onChange={(event) => setNote(event.target.value)}
+          />
+          <button className="wow-button" type="submit">
+            Send feedback
+          </button>
+        </form>
         <div className="download">
           <a className="wow-button" href="/leyword.zip" download="Leyword.zip">
             Download addon

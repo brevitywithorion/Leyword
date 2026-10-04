@@ -2,7 +2,7 @@
 ## Title: Leyword
 ## Notes: One five-letter puzzle each realm day. Guildmates see your score and grid, never the words.
 ## Author: Orion Wills
-## Version: 1.0.6
+## Version: 1.0.7
 ## SavedVariables: LeywordDB
 ## OptionalDeps: EllesmereUI, ElvUI, Tukui
 ## IconTexture: Interface\Icons\INV_Misc_Book_09

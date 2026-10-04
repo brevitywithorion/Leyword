@@ -407,6 +407,54 @@ local function Build()
   another:SetPoint("TOPRIGHT", board, "TOPRIGHT", -12, -556)
   another:SetText("Another")
   another:Hide()
+  local feedback = CreateFrame("Button", "LeywordFeedbackButton", frame, "UIPanelButtonTemplate")
+  feedback:SetSize(84, 22)
+  feedback:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -44)
+  feedback:SetText("Feedback")
+  local popup = CreateFrame("Frame", "LeywordFeedback", UIParent, "BasicFrameTemplateWithInset")
+  popup:SetSize(340, 230)
+  popup:SetPoint("CENTER")
+  popup:SetFrameStrata("DIALOG")
+  popup:SetFrameLevel(400)
+  popup:SetToplevel(true)
+  popup:Hide()
+  if popup.TitleText then
+    popup.TitleText:SetText("Feedback")
+  end
+  AddEscape("LeywordFeedback")
+  local well = CreateFrame("Frame", nil, popup, "BackdropTemplate")
+  well:SetSize(300, 108)
+  well:SetPoint("TOP", 0, -36)
+  well:SetBackdrop({
+    bgFile = "Interface\\Buttons\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+  })
+  well:SetBackdropColor(0, 0, 0, 0.65)
+  well:SetBackdropBorderColor(0.7, 0.55, 0.25, 1)
+  local edit = CreateFrame("EditBox", nil, well)
+  edit:SetPoint("TOPLEFT", 8, -6)
+  edit:SetPoint("BOTTOMRIGHT", -8, 6)
+  edit:SetMultiLine(true)
+  edit:SetMaxLetters(500)
+  edit:SetAutoFocus(false)
+  edit:SetFontObject(GameFontHighlight)
+  edit:SetTextColor(1, 0.96, 0.82)
+  edit:EnableMouse(true)
+  local hint = popup:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  hint:SetPoint("TOP", well, "BOTTOM", 0, -8)
+  hint:SetWidth(300)
+  hint:SetJustifyH("CENTER")
+  hint:SetText("Write a note. Send copies a mail link. Paste it into your browser.")
+  local send = CreateFrame("Button", "LeywordFeedbackSend", popup, "UIPanelButtonTemplate")
+  send:SetSize(80, 22)
+  send:SetPoint("BOTTOM", -46, 14)
+  send:SetText("Send")
+  local cancel = CreateFrame("Button", "LeywordFeedbackCancel", popup, "UIPanelButtonTemplate")
+  cancel:SetSize(80, 22)
+  cancel:SetPoint("BOTTOM", 46, 14)
+  cancel:SetText("Cancel")
   local menu = CreateFrame("Frame", "LeywordShareMenu", frame, "BackdropTemplate")
   menu:SetSize(196, 58)
   menu:SetPoint("TOP", share, "BOTTOM", 0, -2)
@@ -576,6 +624,40 @@ local function Build()
     menu:Hide()
     Leyword.Refresh()
   end)
+  local function UrlEncode(text)
+    return (text:gsub("[^%w%-_%.~]", function(char)
+      return string.format("%%%02X", string.byte(char))
+    end))
+  end
+  local function FeedbackLink(text)
+    local name = UnitName("player") or "player"
+    local realm = GetRealmName() or ""
+    local body = "From: " .. name .. "-" .. realm .. "\n\n" .. text
+    return "mailto:leyword@agentmail.to?subject=" .. UrlEncode("Leyword feedback") .. "&body=" .. UrlEncode(body)
+  end
+  feedback:SetScript("OnClick", function()
+    edit:SetText("")
+    hint:SetText("Write a note. Send copies a mail link. Paste it into your browser.")
+    popup:Show()
+    edit:SetFocus()
+  end)
+  send:SetScript("OnClick", function()
+    local text = (edit:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if text == "" or text:sub(1, 7) == "mailto:" then
+      hint:SetText("Write a note first.")
+      return
+    end
+    edit:SetText(FeedbackLink(text))
+    edit:HighlightText()
+    edit:SetFocus()
+    hint:SetText("Press Ctrl+C, then paste the link into your browser.")
+  end)
+  cancel:SetScript("OnClick", function()
+    popup:Hide()
+  end)
+  frame:HookScript("OnHide", function()
+    popup:Hide()
+  end)
   colorblind:SetScript("OnClick", function(self)
     LeywordDB.settings.colorblind = self:GetChecked() and true or false
     Leyword.Refresh()
@@ -619,6 +701,7 @@ local function Build()
     submit = submit,
     share = share,
     another = another,
+    feedback = feedback,
     shareMenu = menu,
     channels = channels,
     back = back,

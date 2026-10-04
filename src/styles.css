@@ -363,9 +363,25 @@
 }
 
 .download {
-  display: flex;
-  justify-content: center;
   margin-top: 0.8rem;
+  text-align: center;
+}
+
+.feedback {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.feedback-box {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-line);
+  background: color-mix(in srgb, black 35%, transparent);
+  color: var(--color-ink);
+  font: inherit;
 }
 
 .download a {
