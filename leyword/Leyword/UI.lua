@@ -508,8 +508,9 @@ local function Build()
   closeFeedback:SetText("Close")
   local menu = CreateFrame("Frame", "LeywordShareMenu", frame, "BackdropTemplate")
   menu:SetSize(196, 58)
-  menu:SetPoint("TOP", share, "BOTTOM", 0, -2)
-  menu:SetFrameStrata("DIALOG")
+  menu:SetPoint("BOTTOMRIGHT", share, "TOPRIGHT", 0, 4)
+  menu:SetFrameStrata("TOOLTIP")
+  menu:SetFrameLevel(50)
   menu:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
