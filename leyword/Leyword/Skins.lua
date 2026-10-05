@@ -55,6 +55,7 @@ function Leyword.ApplyBuiltinSkins()
         Try(skins.HandleButton, skins, frames.submit)
         Try(skins.HandleButton, skins, frames.share)
         Try(skins.HandleButton, skins, frames.another)
+        Try(skins.HandleButton, skins, frames.today)
         Try(skins.HandleButton, skins, frames.feedback)
         if frames.channels then
           for i = 1, #frames.channels do
@@ -64,6 +65,7 @@ function Leyword.ApplyBuiltinSkins()
         Try(skins.HandleButton, skins, frames.back)
         Try(skins.HandleButton, skins, frames.puzzleTab)
         Try(skins.HandleButton, skins, frames.guildTab)
+        Try(skins.HandleButton, skins, frames.pastTab)
         Try(skins.HandleCloseButton, skins, frames.main.CloseButton)
         Try(skins.HandleCheckBox, skins, frames.colorblind)
         Try(skins.HandleCheckBox, skins, frames.keyboard)
@@ -78,6 +80,7 @@ function Leyword.ApplyBuiltinSkins()
       Try(T.SkinButton, frames.submit)
       Try(T.SkinButton, frames.share)
       Try(T.SkinButton, frames.another)
+      Try(T.SkinButton, frames.today)
       Try(T.SkinButton, frames.feedback)
       if frames.channels then
         for i = 1, #frames.channels do
@@ -117,6 +120,7 @@ function Leyword.SyncEllesmereTabs(which)
   end
   pcall(skin.SetTabSelection, frames.puzzleTab, which == "puzzle")
   pcall(skin.SetTabSelection, frames.guildTab, which == "guild")
+  pcall(skin.SetTabSelection, frames.pastTab, which == "past")
 end
 
 function Leyword.ApplyEllesmere(skin)
@@ -146,6 +150,7 @@ function Leyword.ApplyEllesmere(skin)
   call("Button", frames.submit)
   call("Button", frames.share)
   call("Button", frames.another)
+  call("Button", frames.today)
   call("Button", frames.feedback)
   if frames.channels then
     for i = 1, #frames.channels do
@@ -157,6 +162,7 @@ function Leyword.ApplyEllesmere(skin)
   call("Checkbox", frames.keyboard)
   call("Tab", frames.puzzleTab)
   call("Tab", frames.guildTab)
+  call("Tab", frames.pastTab)
   call("ScrollBar", frames.guildScroll.ScrollBar or _G.LeywordGuildScrollScrollBar)
   call("Font", frames.number)
   call("Font", frames.status)

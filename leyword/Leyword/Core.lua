@@ -16,6 +16,7 @@ local DEFAULTS = {
     dist = { 0, 0, 0, 0, 0, 0 },
   },
   current = nil,
+  history = {},
   guild = {},
   lastQuery = 0,
 }
@@ -49,6 +50,9 @@ loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" and arg1 == "Leyword" then
     Leyword.InitDB()
+    if Leyword.CatchHistory then
+      Leyword.CatchHistory()
+    end
     if Leyword.PruneGuild then
       Leyword.PruneGuild()
     end

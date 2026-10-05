@@ -178,10 +178,11 @@ function Leyword.Refresh()
   if not frames or not frames.main:IsShown() then
     return
   end
-  local cur = Leyword.Round()
+  local reviewing = Leyword.review
+  local cur = reviewing or Leyword.Round()
   local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
-  frames.number:SetText(cur.extra and "Extra" or ("No. " .. number))
-  local draft = cur.done == "play" and string.lower(Leyword.draft or "") or ""
+  frames.number:SetText(reviewing and "Past" or (cur.extra and "Extra" or ("No. " .. number)))
+  local draft = (not reviewing and cur.done == "play") and string.lower(Leyword.draft or "") or ""
   local active = #cur.guesses + 1
   for row = 1, 6 do
     local guess = cur.guesses[row]
@@ -216,24 +217,48 @@ function Leyword.Refresh()
   frames.colorblind:SetChecked(LeywordDB.settings.colorblind)
   local showKeys = LeywordDB.settings.keyboard ~= false
   frames.keyboard:SetChecked(showKeys)
-  frames.keypad:SetShown(showKeys)
-  if cur.done == "win" then
-    frames.result:SetText("Solved in " .. #cur.guesses .. ".")
-    frames.share:Enable()
-    frames.another:Show()
-  else
+  frames.keypad:SetShown(showKeys and not reviewing)
+  if reviewing then
     if frames.shareMenu then
       frames.shareMenu:Hide()
     end
-    if cur.done == "loss" then
-      local word = cur.answer or Leyword.AnswerFor(cur.y, cur.m, cur.d)
-      frames.result:SetText("The word was " .. word:upper() .. ".")
-      frames.another:Show()
+    if cur.done == "win" then
+      frames.result:SetText("Solved in " .. #cur.guesses .. ".")
+    elseif cur.done == "loss" then
+      local word = cur.answer or ""
+      frames.result:SetText(word ~= "" and ("The word was " .. word:upper() .. ".") or "Not solved.")
     else
       frames.result:SetText("")
-      frames.another:Hide()
     end
     frames.share:Disable()
+    frames.another:Hide()
+    frames.today:Show()
+    frames.guessBox:EnableMouse(false)
+    frames.submit:Disable()
+    frames.back:Disable()
+  else
+    frames.today:Hide()
+    frames.guessBox:EnableMouse(true)
+    frames.submit:Enable()
+    frames.back:Enable()
+    if cur.done == "win" then
+      frames.result:SetText("Solved in " .. #cur.guesses .. ".")
+      frames.share:Enable()
+      frames.another:Show()
+    else
+      if frames.shareMenu then
+        frames.shareMenu:Hide()
+      end
+      if cur.done == "loss" then
+        local word = cur.answer or Leyword.AnswerFor(cur.y, cur.m, cur.d)
+        frames.result:SetText("The word was " .. word:upper() .. ".")
+        frames.another:Show()
+      else
+        frames.result:SetText("")
+        frames.another:Hide()
+      end
+      frames.share:Disable()
+    end
   end
   local stats = LeywordDB.stats
   local played = stats.played or 0
@@ -301,6 +326,41 @@ function Leyword.RefreshGuild()
     end
   end
   frames.guildContent:SetHeight(math.max(40, #rows * 54))
+  Leyword.RefreshHistory()
+end
+
+local MONTHS = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" }
+
+function Leyword.RefreshHistory()
+  local frames = Leyword.frames
+  if not frames or not frames.pastRows then
+    return
+  end
+  local history = LeywordDB.history or {}
+  if #history == 0 then
+    frames.pastEmpty:SetText("Finished puzzles show up here. Games from before this update were not kept.")
+  else
+    frames.pastEmpty:SetText("")
+  end
+  for i = 1, #frames.pastRows do
+    local row = frames.pastRows[i]
+    local entry = history[i]
+    if entry then
+      local when = (MONTHS[entry.m] or "?") .. " " .. tostring(entry.d)
+      if entry.extra then
+        when = when .. " extra"
+      else
+        local _, puzzle = Leyword.AnswerFor(entry.y, entry.m, entry.d)
+        when = when .. "   No. " .. puzzle
+      end
+      local score = entry.done == "win" and (#entry.guesses .. "/6") or "X/6"
+      row:SetText(when .. "    " .. score)
+      row:Show()
+    else
+      row:Hide()
+    end
+  end
+  frames.pastContent:SetHeight(math.max(40, math.min(#history, #frames.pastRows) * 26))
 end
 
 local function Build()
@@ -343,6 +403,10 @@ local function Build()
   guildTab:SetSize(90, 22)
   guildTab:SetPoint("LEFT", puzzleTab, "RIGHT", 6, 0)
   guildTab:SetText("Guild")
+  local pastTab = CreateFrame("Button", "LeywordPastTab", frame, "UIPanelButtonTemplate")
+  pastTab:SetSize(70, 22)
+  pastTab:SetPoint("LEFT", guildTab, "RIGHT", 6, 0)
+  pastTab:SetText("Past")
 
   local board = CreateFrame("Frame", nil, frame)
   board:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -74)
@@ -407,6 +471,11 @@ local function Build()
   another:SetPoint("TOPRIGHT", board, "TOPRIGHT", -12, -556)
   another:SetText("Another")
   another:Hide()
+  local today = CreateFrame("Button", "LeywordTodayButton", board, "UIPanelButtonTemplate")
+  today:SetSize(70, 22)
+  today:SetPoint("TOPRIGHT", board, "TOPRIGHT", -8, -2)
+  today:SetText("Today")
+  today:Hide()
   local feedback = CreateFrame("Button", "LeywordFeedbackButton", frame, "UIPanelButtonTemplate")
   feedback:SetSize(84, 22)
   feedback:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -44)
@@ -503,6 +572,9 @@ local function Build()
         label:SetFontObject(GameFontNormalSmall)
       end
       key:SetScript("OnClick", function()
+        if Leyword.review then
+          return
+        end
         local cur = Leyword.Round()
         if cur and cur.done ~= "play" then
           return
@@ -556,7 +628,35 @@ local function Build()
     guildRows[i] = row
   end
 
+  local past = CreateFrame("Frame", nil, frame)
+  past:SetPoint("TOPLEFT", board, "TOPLEFT")
+  past:SetPoint("BOTTOMRIGHT", board, "BOTTOMRIGHT")
+  past:Hide()
+  local pastScroll = CreateFrame("ScrollFrame", "LeywordPastScroll", past, "UIPanelScrollFrameTemplate")
+  pastScroll:SetPoint("TOPLEFT", 4, -8)
+  pastScroll:SetPoint("BOTTOMRIGHT", -26, 4)
+  local pastContent = CreateFrame("Frame", nil, pastScroll)
+  pastContent:SetSize(280, 40)
+  pastScroll:SetScrollChild(pastContent)
+  local pastEmpty = pastContent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  pastEmpty:SetPoint("TOPLEFT", 4, -4)
+  pastEmpty:SetWidth(280)
+  pastEmpty:SetJustifyH("LEFT")
+  pastEmpty:SetText("Finished puzzles show up here. Games from before this update were not kept.")
+  local pastRows = {}
+  for i = 1, 60 do
+    local row = CreateFrame("Button", nil, pastContent, "UIPanelButtonTemplate")
+    row:SetSize(300, 22)
+    row:SetPoint("TOPLEFT", 0, -(i - 1) * 26)
+    row:SetText("")
+    row:Hide()
+    pastRows[i] = row
+  end
+
   local function Submit()
+    if Leyword.review then
+      return
+    end
     local err = Leyword.SubmitGuess(box:GetText() or "")
     if err then
       status:SetText(err)
@@ -629,26 +729,57 @@ local function Build()
     keypad:SetShown(shown)
   end)
 
-  local function ShowPage(which)
+  local function ShowPage(which, keepReview)
     Leyword.page = which
+    if which == "puzzle" and not keepReview then
+      Leyword.review = nil
+    end
     if which ~= "puzzle" then
       menu:Hide()
     end
     board:SetShown(which == "puzzle")
     guild:SetShown(which == "guild")
+    past:SetShown(which == "past")
     if Leyword.SyncEllesmereTabs then
       Leyword.SyncEllesmereTabs(which)
     end
     if which == "guild" and Leyword.RequestSync then
       Leyword.RequestSync()
     end
+    if which == "past" then
+      Leyword.RefreshHistory()
+    end
   end
   puzzleTab:SetScript("OnClick", function()
     ShowPage("puzzle")
+    Leyword.Refresh()
   end)
   guildTab:SetScript("OnClick", function()
     ShowPage("guild")
   end)
+  pastTab:SetScript("OnClick", function()
+    ShowPage("past")
+  end)
+  today:SetScript("OnClick", function()
+    Leyword.review = nil
+    box:SetText("")
+    Leyword.draft = ""
+    ShowPage("puzzle")
+    Leyword.Refresh()
+  end)
+  for i = 1, #pastRows do
+    pastRows[i]:SetScript("OnClick", function()
+      local entry = LeywordDB.history and LeywordDB.history[i]
+      if not entry then
+        return
+      end
+      Leyword.review = entry
+      box:SetText("")
+      Leyword.draft = ""
+      ShowPage("puzzle", true)
+      Leyword.Refresh()
+    end)
+  end
 
   Leyword.frames = {
     main = frame,
@@ -662,12 +793,17 @@ local function Build()
     submit = submit,
     share = share,
     another = another,
+    today = today,
     feedback = feedback,
     shareMenu = menu,
     channels = channels,
     back = back,
     puzzleTab = puzzleTab,
     guildTab = guildTab,
+    pastTab = pastTab,
+    pastRows = pastRows,
+    pastEmpty = pastEmpty,
+    pastContent = pastContent,
     colorblind = colorblind,
     keyboard = keyboard,
     status = status,

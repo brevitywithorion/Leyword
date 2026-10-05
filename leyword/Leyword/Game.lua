@@ -124,11 +124,54 @@ function Leyword.Round()
   return daily
 end
 
+local HISTORY_MAX = 60
+
+function Leyword.Archive(cur)
+  if type(cur) ~= "table" or cur.done == "play" or cur.archived then
+    return
+  end
+  if type(LeywordDB.history) ~= "table" then
+    LeywordDB.history = {}
+  end
+  local entry = {
+    date = cur.date,
+    y = cur.y,
+    m = cur.m,
+    d = cur.d,
+    guesses = {},
+    states = {},
+    done = cur.done,
+    extra = cur.extra and true or false,
+    answer = cur.answer,
+  }
+  for i = 1, #cur.guesses do
+    entry.guesses[i] = cur.guesses[i]
+    entry.states[i] = cur.states[i]
+  end
+  table.insert(LeywordDB.history, 1, entry)
+  while #LeywordDB.history > HISTORY_MAX do
+    table.remove(LeywordDB.history)
+  end
+  cur.archived = true
+end
+
+function Leyword.CatchHistory()
+  if type(LeywordDB.current) == "table" then
+    Leyword.Archive(LeywordDB.current)
+  end
+  if type(LeywordDB.extra) == "table" then
+    Leyword.Archive(LeywordDB.extra)
+  end
+end
+
 function Leyword.StartExtra()
   local daily = Leyword.EnsureToday()
   local showing = Leyword.Round()
   if showing.done == "play" then
     return
+  end
+  if type(LeywordDB.extra) == "table" then
+    Leyword.Archive(LeywordDB.extra)
   end
   local list = Leyword.Answers
   if type(list) ~= "table" or #list < 1 then
@@ -180,7 +223,15 @@ function Leyword.EnsureToday()
   local y, m, d = Leyword.Today()
   local key = Leyword.DateKey(y, m, d)
   local cur = LeywordDB.current
-  if type(cur) ~= "table" or cur.date ~= key then
+  if type(cur) == "table" and cur.date ~= key then
+    Leyword.Archive(cur)
+    if type(LeywordDB.extra) == "table" then
+      Leyword.Archive(LeywordDB.extra)
+    end
+    LeywordDB.extra = nil
+    cur = nil
+  end
+  if type(cur) ~= "table" then
     cur = {
       date = key,
       y = y,
@@ -263,12 +314,15 @@ function Leyword.SubmitGuess(raw)
   elseif #cur.guesses >= 6 then
     cur.done = "loss"
   end
-  if cur.done ~= "play" and not cur.extra then
-    cur.character = CharacterName()
-    Leyword.RecordFinish(cur)
-    if Leyword.BroadcastResult then
-      Leyword.BroadcastResult()
+  if cur.done ~= "play" then
+    if not cur.extra then
+      cur.character = CharacterName()
+      Leyword.RecordFinish(cur)
+      if Leyword.BroadcastResult then
+        Leyword.BroadcastResult()
+      end
     end
+    Leyword.Archive(cur)
   end
   return nil
 end
