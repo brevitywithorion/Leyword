@@ -109,7 +109,7 @@ local function AddEscape(name)
 end
 
 function Leyword.ShareLines()
-  local cur = Leyword.Round()
+  local cur = Leyword.review or Leyword.Round()
   if not cur or cur.done ~= "win" then
     return nil
   end
@@ -219,18 +219,21 @@ function Leyword.Refresh()
   frames.keyboard:SetChecked(showKeys)
   frames.keypad:SetShown(showKeys and not reviewing)
   if reviewing then
-    if frames.shareMenu then
-      frames.shareMenu:Hide()
-    end
     if cur.done == "win" then
       frames.result:SetText("Solved in " .. #cur.guesses .. ".")
-    elseif cur.done == "loss" then
-      local word = cur.answer or ""
-      frames.result:SetText(word ~= "" and ("The word was " .. word:upper() .. ".") or "Not solved.")
+      frames.share:Enable()
     else
-      frames.result:SetText("")
+      if frames.shareMenu then
+        frames.shareMenu:Hide()
+      end
+      if cur.done == "loss" then
+        local word = cur.answer or ""
+        frames.result:SetText(word ~= "" and ("The word was " .. word:upper() .. ".") or "Not solved.")
+      else
+        frames.result:SetText("")
+      end
+      frames.share:Disable()
     end
-    frames.share:Disable()
     frames.another:Hide()
     frames.today:Show()
     frames.guessBox:EnableMouse(false)
@@ -309,7 +312,7 @@ function Leyword.RefreshGuild()
   if not IsInGuild() then
     frames.guildEmpty:SetText("Join a guild to compare today's score and grid.")
   elseif #rows == 0 then
-    frames.guildEmpty:SetText("No guild results yet. Finish today's puzzle. A score stays on the guild roster, so you can still see it after they log off.")
+    frames.guildEmpty:SetText("No guild results yet. Scores sync when a guildmate logs on, and again every 15 minutes.")
   else
     frames.guildEmpty:SetText("")
   end
@@ -693,7 +696,7 @@ local function Build()
   end)
   submit:SetScript("OnClick", Submit)
   share:SetScript("OnClick", function()
-    local cur = Leyword.Round()
+    local cur = Leyword.review or Leyword.Round()
     if not cur or cur.done ~= "win" then
       return
     end
@@ -752,6 +755,9 @@ local function Build()
     end
   end
   puzzleTab:SetScript("OnClick", function()
+    if Leyword.review then
+      Leyword.focus = "daily"
+    end
     ShowPage("puzzle")
     Leyword.Refresh()
   end)
@@ -763,6 +769,7 @@ local function Build()
   end)
   today:SetScript("OnClick", function()
     Leyword.review = nil
+    Leyword.focus = "daily"
     box:SetText("")
     Leyword.draft = ""
     ShowPage("puzzle")

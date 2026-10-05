@@ -98,41 +98,65 @@ local function ResultMessage(cur)
   return string.format("1|R|%s|%s|%s|%s", cur.date, score, won, table.concat(cur.states))
 end
 
-function Leyword.BroadcastResult()
+local function FinishedFor(ymd)
   local cur = LeywordDB.current
-  if not cur or cur.done == "play" or not IsInGuild() then
+  if cur and cur.date == ymd and not cur.extra and cur.done ~= "play" then
+    return cur
+  end
+  local history = LeywordDB.history
+  if type(history) ~= "table" then
+    return nil
+  end
+  for i = 1, #history do
+    local entry = history[i]
+    if entry and entry.date == ymd and not entry.extra and entry.done ~= "play" then
+      return entry
+    end
+  end
+  return nil
+end
+
+function Leyword.BroadcastResult()
+  if not IsInGuild() then
     return
   end
-  local msg = ResultMessage(cur)
-  if Leyword.Enqueue(msg, "GUILD") then
-    cur.shared = true
+  local cur = LeywordDB.current
+  if not cur or cur.extra or cur.done == "play" then
+    return
   end
-  if Leyword.PublishNote then
-    Leyword.PublishNote()
+  if Leyword.Enqueue(ResultMessage(cur), "GUILD") then
+    cur.shared = true
   end
 end
 
-function Leyword.RequestSync()
+function Leyword.SyncGuild()
   if not IsInGuild() then
     return
   end
   local now = time()
-  if (now - (LeywordDB.lastQuery or 0)) >= 20 then
-    LeywordDB.lastQuery = now
-    local cur = Leyword.EnsureToday()
-    Leyword.Enqueue("1|Q|" .. cur.date, "GUILD")
-    if cur.done ~= "play" then
-      local msg = ResultMessage(cur)
-      Leyword.Enqueue(msg, "GUILD")
-      cur.shared = true
+  if (now - (LeywordDB.lastQuery or 0)) < 20 then
+    return
+  end
+  LeywordDB.lastQuery = now
+  local ok, y, m, d = pcall(Leyword.Today)
+  if not ok or not y then
+    return
+  end
+  local _, number = Leyword.AnswerFor(y, m, d)
+  for age = 0, 14 do
+    local py, pm, pd = Leyword.YmdFromNumber(number - age)
+    if py then
+      local entry = FinishedFor(Leyword.DateKey(py, pm, pd))
+      if entry then
+        Leyword.Enqueue(ResultMessage(entry), "GUILD")
+      end
     end
   end
-  if Leyword.ReadRosterNotes then
-    Leyword.ReadRosterNotes()
-  end
-  if Leyword.PublishNote then
-    Leyword.PublishNote()
-  end
+  Leyword.Enqueue("1|Q|" .. Leyword.DateKey(y, m, d), "GUILD")
+end
+
+function Leyword.RequestSync()
+  Leyword.SyncGuild()
 end
 
 local function StoreResult(sender, ymd, score, won, pattern)
@@ -195,11 +219,11 @@ local function ReplyTo(sender, ymd)
   if Leyword.IsSelf(sender) then
     return
   end
-  local cur = LeywordDB.current
-  if not cur or cur.date ~= ymd or cur.done == "play" then
+  local entry = FinishedFor(ymd)
+  if not entry then
     return
   end
-  Leyword.Enqueue(ResultMessage(cur), "WHISPER", sender)
+  Leyword.Enqueue(ResultMessage(entry), "WHISPER", sender)
 end
 
 local function OnAddonMessage(_, message, distribution, sender)
@@ -300,6 +324,8 @@ local function WritePublicNote(index, note)
 end
 
 function Leyword.PublishNote()
+  return
+end
   if not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo then
     return
   end
@@ -361,6 +387,43 @@ end
 
 local listener = CreateFrame("Frame")
 local rosterWait = false
+local knownOnline
+local memberSync
+local function NoteArrivals()
+  if not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo then
+    return false
+  end
+  local count = GetNumGuildMembers()
+  if count < 1 then
+    return false
+  end
+  local nowOnline = {}
+  local arrived = false
+  for i = 1, count do
+    local name, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
+    if name and isOnline then
+      nowOnline[name] = true
+      if knownOnline and not knownOnline[name] and not Leyword.IsSelf(name) then
+        arrived = true
+      end
+    end
+  end
+  knownOnline = nowOnline
+  return arrived
+end
+local function ScheduleSync()
+  if memberSync then
+    return
+  end
+  memberSync = true
+  C_Timer.After(2, function()
+    memberSync = false
+    LeywordDB.lastQuery = 0
+    if Leyword.SyncGuild then
+      Leyword.SyncGuild()
+    end
+  end)
+end
 listener:RegisterEvent("CHAT_MSG_ADDON")
 listener:RegisterEvent("PLAYER_LOGIN")
 listener:RegisterEvent("GUILD_ROSTER_UPDATE")
@@ -374,10 +437,10 @@ listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, 
   end
   if event == "PLAYER_LOGIN" then
     AskRoster()
-    C_Timer.After(3, function()
-      if Leyword.RequestSync then
-        Leyword.RequestSync()
-      end
+    C_Timer.After(3, ScheduleSync)
+    C_Timer.NewTicker(900, function()
+      AskRoster()
+      ScheduleSync()
     end)
     return
   end
@@ -390,8 +453,8 @@ listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, 
     if Leyword.ReadRosterNotes then
       Leyword.ReadRosterNotes()
     end
-    if Leyword.PublishNote then
-      Leyword.PublishNote()
+    if NoteArrivals() then
+      ScheduleSync()
     end
   end)
 end)

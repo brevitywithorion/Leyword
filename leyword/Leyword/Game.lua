@@ -133,11 +133,15 @@ end
 function Leyword.Round()
   local daily = Leyword.EnsureToday()
   local extra = LeywordDB.extra
-  if type(extra) == "table" and extra.date == daily.date then
-    return extra
+  if type(extra) == "table" and extra.date ~= daily.date then
+    LeywordDB.extra = nil
+    extra = nil
+  end
+  if Leyword.focus == "daily" then
+    return daily
   end
   if type(extra) == "table" then
-    LeywordDB.extra = nil
+    return extra
   end
   return daily
 end
@@ -184,12 +188,18 @@ end
 
 function Leyword.StartExtra()
   local daily = Leyword.EnsureToday()
-  local showing = Leyword.Round()
-  if showing.done == "play" then
+  if daily.done == "play" then
     return
   end
-  if type(LeywordDB.extra) == "table" then
-    Leyword.Archive(LeywordDB.extra)
+  local extra = LeywordDB.extra
+  if type(extra) == "table" and extra.date == daily.date and extra.done == "play" then
+    Leyword.focus = nil
+    Leyword.draft = ""
+    return
+  end
+  Leyword.focus = nil
+  if type(extra) == "table" then
+    Leyword.Archive(extra)
   end
   local list = Leyword.Answers
   if type(list) ~= "table" or #list < 1 then
@@ -201,8 +211,8 @@ function Leyword.StartExtra()
     LeywordDB.usedDate = daily.date
   end
   LeywordDB.used[todayAnswer] = true
-  if showing.answer then
-    LeywordDB.used[showing.answer] = true
+  if type(extra) == "table" and extra.answer then
+    LeywordDB.used[extra.answer] = true
   end
   local pick
   for _ = 1, 50 do
