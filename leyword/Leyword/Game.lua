@@ -23,6 +23,24 @@ function Leyword.PuzzleNumber(y, m, d)
   return Leyword.Rdn(y, m, d) - Leyword.Rdn(EPOCH_Y, EPOCH_M, EPOCH_D) + 1
 end
 
+function Leyword.YmdFromNumber(number)
+  number = tonumber(number)
+  if not number or number < 1 or number > 20000 then
+    return nil
+  end
+  local jd = Leyword.Rdn(EPOCH_Y, EPOCH_M, EPOCH_D) + number - 1
+  local a = jd + 32044
+  local b = math.floor((4 * a + 3) / 146097)
+  local c = a - math.floor((146097 * b) / 4)
+  local d = math.floor((4 * c + 3) / 1461)
+  local e = c - math.floor((1461 * d) / 4)
+  local m = math.floor((5 * e + 2) / 153)
+  local day = e - math.floor((153 * m + 2) / 5) + 1
+  local month = m + 3 - 12 * math.floor(m / 10)
+  local year = 100 * b + d - 4800 + math.floor(m / 10)
+  return year, month, day
+end
+
 function Leyword.AnswerFor(y, m, d)
   local list = Leyword.Answers
   local n = #list

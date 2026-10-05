@@ -309,7 +309,7 @@ function Leyword.RefreshGuild()
   if not IsInGuild() then
     frames.guildEmpty:SetText("Join a guild to compare today's score and grid.")
   elseif #rows == 0 then
-    frames.guildEmpty:SetText("No guild results yet. Finish the puzzle and anyone with Leyword in your guild will see the grid, not the words.")
+    frames.guildEmpty:SetText("No guild results yet. Finish today's puzzle. A score stays on the guild roster, so you can still see it after they log off.")
   else
     frames.guildEmpty:SetText("")
   end

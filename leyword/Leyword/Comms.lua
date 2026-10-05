@@ -107,6 +107,9 @@ function Leyword.BroadcastResult()
   if Leyword.Enqueue(msg, "GUILD") then
     cur.shared = true
   end
+  if Leyword.PublishNote then
+    Leyword.PublishNote()
+  end
 end
 
 function Leyword.RequestSync()
@@ -114,14 +117,21 @@ function Leyword.RequestSync()
     return
   end
   local now = time()
-  if (now - (LeywordDB.lastQuery or 0)) >= 300 then
+  if (now - (LeywordDB.lastQuery or 0)) >= 20 then
     LeywordDB.lastQuery = now
     local cur = Leyword.EnsureToday()
     Leyword.Enqueue("1|Q|" .. cur.date, "GUILD")
+    if cur.done ~= "play" then
+      local msg = ResultMessage(cur)
+      Leyword.Enqueue(msg, "GUILD")
+      cur.shared = true
+    end
   end
-  local cur = LeywordDB.current
-  if cur and cur.done ~= "play" and not cur.shared then
-    Leyword.BroadcastResult()
+  if Leyword.ReadRosterNotes then
+    Leyword.ReadRosterNotes()
+  end
+  if Leyword.PublishNote then
+    Leyword.PublishNote()
   end
 end
 
@@ -189,12 +199,6 @@ local function ReplyTo(sender, ymd)
   if not cur or cur.date ~= ymd or cur.done == "play" then
     return
   end
-  Leyword._replied = Leyword._replied or {}
-  local key = sender .. ":" .. ymd
-  if Leyword._replied[key] then
-    return
-  end
-  Leyword._replied[key] = true
   Leyword.Enqueue(ResultMessage(cur), "WHISPER", sender)
 end
 
@@ -219,11 +223,175 @@ local function OnAddonMessage(_, message, distribution, sender)
   end
 end
 
-local listener = CreateFrame("Frame")
-listener:RegisterEvent("CHAT_MSG_ADDON")
-listener:SetScript("OnEvent", function(_, _, prefix, message, distribution, sender)
-  if prefix ~= PREFIX then
+local ALPH = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+local function AlphIndex(char)
+  local index = ALPH:find(char, 1, true)
+  if not index then
+    return nil
+  end
+  return index - 1
+end
+
+local function EncodeRow(state)
+  local value = 0
+  for i = 1, 5 do
+    local mark = state:sub(i, i)
+    local n = mark == "G" and 0 or (mark == "Y" and 1 or 2)
+    value = value * 3 + n
+  end
+  return ALPH:sub(math.floor(value / 62) + 1, math.floor(value / 62) + 1) .. ALPH:sub((value % 62) + 1, (value % 62) + 1)
+end
+
+local function DecodeRow(text)
+  local hi = AlphIndex(text:sub(1, 1))
+  local lo = AlphIndex(text:sub(2, 2))
+  if not hi or not lo then
+    return nil
+  end
+  local value = hi * 62 + lo
+  if value > 242 then
+    return nil
+  end
+  local marks = {}
+  for _, place in ipairs({ 81, 27, 9, 3, 1 }) do
+    local n = math.floor(value / place)
+    value = value % place
+    marks[#marks + 1] = n == 0 and "G" or (n == 1 and "Y" or "B")
+  end
+  return table.concat(marks)
+end
+
+local function NoteFor(cur)
+  local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+  local packed = {}
+  for i = 1, #cur.states do
+    if #cur.states[i] ~= 5 then
+      return nil
+    end
+    packed[#packed + 1] = EncodeRow(cur.states[i])
+  end
+  local score = cur.done == "win" and tostring(#cur.guesses) or "0"
+  return string.format("LW%d:%s:%s", number, score, table.concat(packed))
+end
+
+local function AskRoster()
+  if C_GuildInfo and C_GuildInfo.GuildRoster then
+    pcall(C_GuildInfo.GuildRoster)
+  elseif GuildRoster then
+    pcall(GuildRoster)
+  end
+end
+
+local function WritePublicNote(index, note)
+  if GuildRosterSetPublicNote and pcall(GuildRosterSetPublicNote, index, note) then
+    return true
+  end
+  if C_GuildInfo and C_GuildInfo.SetNote then
+    local guid = UnitGUID("player")
+    if guid and pcall(C_GuildInfo.SetNote, guid, note, true) then
+      return true
+    end
+    if pcall(C_GuildInfo.SetNote, index, note, true) then
+      return true
+    end
+  end
+  return false
+end
+
+function Leyword.PublishNote()
+  if not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo then
     return
   end
-  OnAddonMessage(prefix, message, distribution, sender)
+  local cur = LeywordDB.current
+  if not cur or cur.done == "play" then
+    return
+  end
+  local note = NoteFor(cur)
+  if not note or #note > 31 then
+    return
+  end
+  local count = GetNumGuildMembers()
+  for i = 1, count do
+    local name, _, _, _, _, _, publicNote = GetGuildRosterInfo(i)
+    if name and Leyword.IsSelf(name) then
+      if publicNote == note then
+        return
+      end
+      if type(publicNote) == "string" and publicNote ~= "" and not publicNote:match("^LW%d+:%d:[0-9A-Za-z]+$") then
+        return
+      end
+      WritePublicNote(i, note)
+      return
+    end
+  end
+end
+
+function Leyword.ReadRosterNotes()
+  if not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo or not Leyword.YmdFromNumber then
+    return
+  end
+  local count = GetNumGuildMembers()
+  for i = 1, count do
+    local name, _, _, _, _, _, publicNote = GetGuildRosterInfo(i)
+    if name and type(publicNote) == "string" then
+      local number, score, packed = publicNote:match("^LW(%d+):(%d):([0-9A-Za-z]+)$")
+      if number and packed and #packed % 2 == 0 and #packed >= 2 and #packed <= 12 then
+        local pattern = {}
+        local valid = true
+        for pos = 1, #packed, 2 do
+          local row = DecodeRow(packed:sub(pos, pos + 1))
+          if not row then
+            valid = false
+            break
+          end
+          pattern[#pattern + 1] = row
+        end
+        if valid then
+          local y, m, d = Leyword.YmdFromNumber(tonumber(number))
+          if y then
+            local won = score == "0" and "0" or "1"
+            StoreResult(name, Leyword.DateKey(y, m, d), score, won, table.concat(pattern))
+          end
+        end
+      end
+    end
+  end
+end
+
+local listener = CreateFrame("Frame")
+local rosterWait = false
+listener:RegisterEvent("CHAT_MSG_ADDON")
+listener:RegisterEvent("PLAYER_LOGIN")
+listener:RegisterEvent("GUILD_ROSTER_UPDATE")
+listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, sender)
+  if event == "CHAT_MSG_ADDON" then
+    if prefix ~= PREFIX then
+      return
+    end
+    OnAddonMessage(prefix, message, distribution, sender)
+    return
+  end
+  if event == "PLAYER_LOGIN" then
+    AskRoster()
+    C_Timer.After(3, function()
+      if Leyword.RequestSync then
+        Leyword.RequestSync()
+      end
+    end)
+    return
+  end
+  if rosterWait then
+    return
+  end
+  rosterWait = true
+  C_Timer.After(1.5, function()
+    rosterWait = false
+    if Leyword.ReadRosterNotes then
+      Leyword.ReadRosterNotes()
+    end
+    if Leyword.PublishNote then
+      Leyword.PublishNote()
+    end
+  end)
 end)
