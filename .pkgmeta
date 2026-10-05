@@ -3,9 +3,6 @@ package-as: Leyword
 package-as: Leyword
 
 move-folders:
-  # The packager strips the first folder when it looks for the TOC.
-  pkg/leyword/Leyword: Leyword
-  # Files are copied into .release/Leyword before this move.
   Leyword/leyword/Leyword: Leyword
 
 ignore:
