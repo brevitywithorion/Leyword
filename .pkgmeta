@@ -1,6 +1,10 @@
 package-as: Leyword
 
+package-as: Leyword
+
 move-folders:
+  # The packager strips the first folder when it looks for the TOC.
+  pkg/leyword/Leyword: Leyword
   leyword/Leyword: Leyword
 
 ignore:
