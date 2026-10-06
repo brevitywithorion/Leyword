@@ -326,32 +326,6 @@ end
 function Leyword.PublishNote()
   return
 end
-  if not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo then
-    return
-  end
-  local cur = LeywordDB.current
-  if not cur or cur.done == "play" then
-    return
-  end
-  local note = NoteFor(cur)
-  if not note or #note > 31 then
-    return
-  end
-  local count = GetNumGuildMembers()
-  for i = 1, count do
-    local name, _, _, _, _, _, publicNote = GetGuildRosterInfo(i)
-    if name and Leyword.IsSelf(name) then
-      if publicNote == note then
-        return
-      end
-      if type(publicNote) == "string" and publicNote ~= "" and not publicNote:match("^LW%d+:%d:[0-9A-Za-z]+$") then
-        return
-      end
-      WritePublicNote(i, note)
-      return
-    end
-  end
-end
 
 function Leyword.ReadRosterNotes()
   if not IsInGuild() or not GetNumGuildMembers or not GetGuildRosterInfo or not Leyword.YmdFromNumber then
