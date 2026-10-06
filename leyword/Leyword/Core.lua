@@ -19,6 +19,7 @@ local DEFAULTS = {
   history = {},
   guild = {},
   lastQuery = 0,
+  minimap = { angle = 225 },
 }
 
 local function CopyDefaults(dst, src)
