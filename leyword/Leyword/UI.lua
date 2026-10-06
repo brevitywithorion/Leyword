@@ -38,15 +38,15 @@ function Leyword.ApplyTile(tile, letter, mark)
 end
 
 function Leyword.ApplyKey(button, mark)
+  local label = button.leywordLabel or button:GetFontString()
   local tex = button:GetNormalTexture()
-  local label = button:GetFontString()
-  if mark then
-    local color = Leyword.Palette()[mark]
+  local color = mark and Leyword.Palette()[mark]
+  if color then
     if tex then
-      tex:SetVertexColor(color[1] + 0.35, color[2] + 0.35, color[3] + 0.35)
+      tex:SetVertexColor(color[1] + 0.2, color[2] + 0.2, color[3] + 0.2)
     end
     if label then
-      label:SetTextColor(0.16, 0.11, 0.07)
+      label:SetTextColor(math.min(1, color[1] + 0.45), math.min(1, color[2] + 0.45), math.min(1, color[3] + 0.45))
     end
   else
     if tex then
@@ -368,7 +368,7 @@ end
 
 local function Build()
   local frame = CreateFrame("Frame", "LeywordFrame", UIParent, "BasicFrameTemplateWithInset")
-  frame:SetSize(470, 720)
+  frame:SetSize(470, 748)
   frame:SetFrameStrata("DIALOG")
   frame:SetFrameLevel(200)
   frame:SetToplevel(true)
@@ -390,17 +390,21 @@ local function Build()
     frame:SetPoint("CENTER")
   end
   if frame.TitleText then
-    frame.TitleText:SetText("Leyword")
-    if not frame.TitleText:SetFont("Fonts\\MORPHEUS.TTF", 28, "") then
-      frame.TitleText:SetFont("Fonts\\MORPHEUS.ttf", 28, "")
-    end
-    frame.TitleText:SetPoint("TOP", frame, "TOP", 0, -4)
+    frame.TitleText:SetText("")
+    frame.TitleText:Hide()
   end
+  local title = frame:CreateFontString(nil, "OVERLAY")
+  title:SetPoint("TOP", frame, "TOP", 0, -30)
+  if not title:SetFont("Fonts\\MORPHEUS.TTF", 24, "") then
+    title:SetFont("Fonts\\MORPHEUS.ttf", 24, "")
+  end
+  title:SetText("LEYWORD")
+  title:SetTextColor(1, 0.82, 0.2)
   AddEscape("LeywordFrame")
   local anchor = frame.Inset or frame
   local puzzleTab = CreateFrame("Button", "LeywordPuzzleTab", frame, "UIPanelButtonTemplate")
   puzzleTab:SetSize(90, 22)
-  puzzleTab:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -44)
+  puzzleTab:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -62)
   puzzleTab:SetText("Puzzle")
   local guildTab = CreateFrame("Button", "LeywordGuildTab", frame, "UIPanelButtonTemplate")
   guildTab:SetSize(90, 22)
@@ -412,7 +416,7 @@ local function Build()
   pastTab:SetText("Past")
 
   local board = CreateFrame("Frame", nil, frame)
-  board:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -74)
+  board:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -92)
   board:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -12, 12)
   local guild = CreateFrame("Frame", nil, frame)
   guild:SetPoint("TOPLEFT", board, "TOPLEFT")
@@ -481,7 +485,7 @@ local function Build()
   today:Hide()
   local feedback = CreateFrame("Button", "LeywordFeedbackButton", frame, "UIPanelButtonTemplate")
   feedback:SetSize(84, 22)
-  feedback:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -44)
+  feedback:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -62)
   feedback:SetText("Feedback")
   local popup = CreateFrame("Frame", "LeywordFeedback", UIParent, "BasicFrameTemplateWithInset")
   popup:SetSize(360, 150)
@@ -572,6 +576,7 @@ local function Build()
       key:SetPoint("TOP", board, "TOP", origin + (i - 1) * 29, keyY[r])
       key:SetText(letter)
       local label = key:GetFontString()
+      key.leywordLabel = label
       if label then
         label:SetFontObject(GameFontNormalSmall)
       end
