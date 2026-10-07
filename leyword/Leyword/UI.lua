@@ -329,6 +329,9 @@ function Leyword.RefreshGuild()
   else
     frames.guildEmpty:SetText("")
   end
+  if frames.guildStatus then
+    frames.guildStatus:SetText(Leyword.syncStatus or "Press Sync while you are both online.")
+  end
   for i = 1, #frames.guildRows do
     local row = frames.guildRows[i]
     local info = rows[i]
@@ -689,7 +692,12 @@ local function Build()
   end)
   local scroll = CreateFrame("ScrollFrame", "LeywordGuildScroll", guild, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", 4, -28)
-  scroll:SetPoint("BOTTOMRIGHT", -26, 4)
+  scroll:SetPoint("BOTTOMRIGHT", -26, 22)
+  local guildStatus = guild:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+  guildStatus:SetPoint("BOTTOMLEFT", 8, 4)
+  guildStatus:SetPoint("BOTTOMRIGHT", -28, 4)
+  guildStatus:SetJustifyH("LEFT")
+  guildStatus:SetText("Press Sync while you are both online.")
   local content = CreateFrame("Frame", nil, scroll)
   content:SetSize(280, 40)
   scroll:SetScrollChild(content)
@@ -911,6 +919,7 @@ local function Build()
     number = number,
     versionWarn = versionWarn,
     guildScroll = scroll,
+    guildStatus = guildStatus,
     guildSync = guildSync,
     guildContent = content,
     guildRows = guildRows,

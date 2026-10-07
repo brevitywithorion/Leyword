@@ -7,6 +7,43 @@ local PREFIX = "LEYWORD"
 local queue = {}
 local timerArmed = false
 
+local ADDON_RESULT = {
+  [0] = "addon channel accepted it",
+  [1] = "addon prefix was rejected",
+  [2] = "addon message was rejected",
+  [3] = "addon channel is throttled",
+  [4] = "addon channel was rejected",
+  [10] = "the client says you are not in a guild",
+  [11] = "addon chat is blocked in this zone",
+  [12] = "that guildmate is offline",
+}
+
+local function RememberStatus(text)
+  Leyword.syncStatus = text
+  if Leyword.Refresh then
+    Leyword.Refresh()
+  end
+end
+
+local function PostChat(text)
+  if type(text) ~= "string" or not IsInGuild() or not SendChatMessage then
+    return false
+  end
+  local now = time()
+  if text == Leyword._lastChat and (now - (Leyword._lastChatAt or 0)) < 8 then
+    return false
+  end
+  Leyword._lastChat = text
+  Leyword._lastChatAt = now
+  local ok = pcall(SendChatMessage, text, "GUILD")
+  if ok then
+    RememberStatus("Sent on guild chat.")
+  else
+    RememberStatus("Guild chat could not send.")
+  end
+  return ok
+end
+
 local function Transmit(msg, chatType, target)
   if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
     C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
@@ -43,6 +80,17 @@ local function Arm(delay)
     if not drop then
       local ok, result = pcall(Transmit, item.msg, item.chat, item.target)
       local failed = (not ok) or (type(result) == "number" and result ~= 0)
+      if item.chat == "GUILD" and item.msg:sub(1, 4) == "1|V|" then
+        local note
+        if not ok then
+          note = "addon channel error"
+        elseif type(result) == "number" and result ~= 0 then
+          note = ADDON_RESULT[result] or ("addon channel code " .. tostring(result))
+        else
+          note = ADDON_RESULT[0]
+        end
+        RememberStatus((Leyword.syncStatus or "Sent on guild chat.") .. " " .. note .. ".")
+      end
       if failed and item.tries < 6 then
         item.tries = item.tries + 1
         table.insert(queue, 1, item)
@@ -171,6 +219,16 @@ local function FinishedFor(ymd)
   return nil
 end
 
+local function ScoreChat(cur)
+  local score = cur.done == "win" and tostring(#cur.guesses) or "0"
+  local label = cur.done == "win" and (score .. "/6") or "X/6"
+  return "Leyword " .. label .. " [LW1:" .. ResultMessage(cur) .. "]"
+end
+
+local function AskChat(ymd)
+  return "Leyword checking scores [LW1:1|Q|" .. ymd .. "|" .. Leyword.AddonVersion() .. "]"
+end
+
 function Leyword.BroadcastResult()
   if not IsInGuild() then
     return
@@ -182,6 +240,7 @@ function Leyword.BroadcastResult()
   if Leyword.Enqueue(ResultMessage(cur), "GUILD") then
     cur.shared = true
   end
+  PostChat(ScoreChat(cur))
 end
 
 function Leyword.SyncGuild(force)
@@ -204,6 +263,14 @@ function Leyword.SyncGuild(force)
     Leyword.Enqueue(ResultMessage(todayEntry), "GUILD")
   end
   Leyword.Enqueue("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion(), "GUILD")
+  if todayEntry then
+    PostChat(ScoreChat(todayEntry))
+    C_Timer.After(1.2, function()
+      PostChat(AskChat(todayKey))
+    end)
+  else
+    PostChat(AskChat(todayKey))
+  end
   local _, number = Leyword.AnswerFor(y, m, d)
   for age = 1, 14 do
     local py, pm, pd = Leyword.YmdFromNumber(number - age)
@@ -294,6 +361,7 @@ local function ReplyTo(sender, ymd)
     return
   end
   Leyword.Enqueue(ResultMessage(entry), "WHISPER", sender)
+  PostChat(ScoreChat(entry))
 end
 
 local function OnAddonMessage(_, message, distribution, sender)
@@ -518,3 +586,24 @@ listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, 
     end
   end)
 end)
+
+local function HideGuildLine(msg, sender)
+  if type(msg) ~= "string" then
+    return false
+  end
+  local payload = msg:match("%[LW1:([^%]]+)%]")
+  if not payload then
+    return false
+  end
+  if type(sender) == "string" and sender ~= "" then
+    OnAddonMessage(nil, payload, "GUILD", sender)
+  end
+  RememberStatus("Heard a guildmate on guild chat.")
+  return true
+end
+
+if ChatFrame_AddMessageEventFilter then
+  ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD", function(_, _, msg, sender)
+    return HideGuildLine(msg, sender)
+  end)
+end
