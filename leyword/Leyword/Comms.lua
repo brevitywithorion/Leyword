@@ -7,6 +7,26 @@ local PREFIX = "LEYWORD"
 local queue = {}
 local timerArmed = false
 
+local function Transmit(msg, chatType, target)
+  if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+    C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+  elseif RegisterAddonMessagePrefix then
+    RegisterAddonMessagePrefix(PREFIX)
+  end
+  if C_ChatInfo and C_ChatInfo.SendAddonMessage then
+    if target then
+      return C_ChatInfo.SendAddonMessage(PREFIX, msg, chatType, target)
+    end
+    return C_ChatInfo.SendAddonMessage(PREFIX, msg, chatType)
+  end
+  if SendAddonMessage then
+    if target then
+      return SendAddonMessage(PREFIX, msg, chatType, target)
+    end
+    return SendAddonMessage(PREFIX, msg, chatType)
+  end
+end
+
 local function Arm(delay)
   if timerArmed then
     return
@@ -21,12 +41,9 @@ local function Arm(delay)
     local nextDelay = 1.5
     local drop = item.chat == "GUILD" and not IsInGuild()
     if not drop then
-      local ok, result = pcall(C_ChatInfo.SendAddonMessage, PREFIX, item.msg, item.chat, item.target)
-      local throttled = ok
-        and Enum
-        and Enum.SendAddonMessageResult
-        and result == Enum.SendAddonMessageResult.AddonMessageThrottle
-      if throttled and item.tries < 4 then
+      local ok, result = pcall(Transmit, item.msg, item.chat, item.target)
+      local failed = (not ok) or (type(result) == "number" and result ~= 0)
+      if failed and item.tries < 6 then
         item.tries = item.tries + 1
         table.insert(queue, 1, item)
         nextDelay = 2.5
@@ -39,12 +56,50 @@ local function Arm(delay)
 end
 
 function Leyword.Enqueue(msg, chat, target)
-  if type(msg) ~= "string" or #msg > 250 or #queue >= 30 then
+  if type(msg) ~= "string" or #msg > 250 or #queue >= 60 then
     return false
   end
   queue[#queue + 1] = { msg = msg, chat = chat, target = target, tries = 0 }
   Arm(0.1)
   return true
+end
+
+function Leyword.AddonVersion()
+  local version
+  if C_AddOns and C_AddOns.GetAddOnMetadata then
+    version = C_AddOns.GetAddOnMetadata("Leyword", "Version")
+  elseif GetAddOnMetadata then
+    version = GetAddOnMetadata("Leyword", "Version")
+  end
+  if type(version) ~= "string" or version == "" then
+    return "0"
+  end
+  return version
+end
+
+local function VersionParts(version)
+  local major, minor, patch = tostring(version):match("^(%d+)%.(%d+)%.(%d+)")
+  return tonumber(major) or 0, tonumber(minor) or 0, tonumber(patch) or 0
+end
+
+function Leyword.NoteRemoteVersion(remote)
+  if type(remote) ~= "string" then
+    return
+  end
+  local a, b, c = VersionParts(remote)
+  local x, y, z = VersionParts(Leyword.AddonVersion())
+  local newer = a > x or (a == x and b > y) or (a == x and b == y and c > z)
+  if not newer then
+    return
+  end
+  local first = not Leyword.outdated
+  Leyword.outdated = remote
+  if first and DEFAULT_CHAT_FRAME then
+    DEFAULT_CHAT_FRAME:AddMessage("|cffd4af37Leyword|r is out of date. A guildmate has " .. remote .. ". Update on CurseForge.")
+  end
+  if Leyword.Refresh then
+    Leyword.Refresh()
+  end
 end
 
 local function MyName()
@@ -95,7 +150,7 @@ end
 local function ResultMessage(cur)
   local won = cur.done == "win" and "1" or "0"
   local score = cur.done == "win" and tostring(#cur.guesses) or "0"
-  return string.format("1|R|%s|%s|%s|%s", cur.date, score, won, table.concat(cur.states))
+  return string.format("1|R|%s|%s|%s|%s|%s", cur.date, score, won, table.concat(cur.states), Leyword.AddonVersion())
 end
 
 local function FinishedFor(ymd)
@@ -138,12 +193,19 @@ function Leyword.SyncGuild()
     return
   end
   LeywordDB.lastQuery = now
+  Leyword.Enqueue("1|V|" .. Leyword.AddonVersion(), "GUILD")
   local ok, y, m, d = pcall(Leyword.Today)
   if not ok or not y then
     return
   end
+  local todayKey = Leyword.DateKey(y, m, d)
+  local todayEntry = FinishedFor(todayKey)
+  if todayEntry then
+    Leyword.Enqueue(ResultMessage(todayEntry), "GUILD")
+  end
+  Leyword.Enqueue("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion(), "GUILD")
   local _, number = Leyword.AnswerFor(y, m, d)
-  for age = 0, 14 do
+  for age = 1, 14 do
     local py, pm, pd = Leyword.YmdFromNumber(number - age)
     if py then
       local entry = FinishedFor(Leyword.DateKey(py, pm, pd))
@@ -152,7 +214,15 @@ function Leyword.SyncGuild()
       end
     end
   end
-  Leyword.Enqueue("1|Q|" .. Leyword.DateKey(y, m, d), "GUILD")
+  if todayEntry and GetNumGuildMembers and GetGuildRosterInfo then
+    local count = GetNumGuildMembers()
+    for i = 1, count do
+      local name, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
+      if type(name) == "string" and isOnline and not Leyword.IsSelf(name) then
+        Leyword.Enqueue(ResultMessage(todayEntry), "WHISPER", name)
+      end
+    end
+  end
 end
 
 function Leyword.RequestSync()
@@ -236,13 +306,22 @@ local function OnAddonMessage(_, message, distribution, sender)
   if sender:find("|", 1, true) then
     return
   end
-  local ver, kind, ymd, a, b, pattern = strsplit("|", message)
-  if ver ~= "1" or type(ymd) ~= "string" or not ymd:match("^%d%d%d%d%d%d%d%d$") then
+  local proto, kind, ymd, a, b, pattern, remoteVer = strsplit("|", message)
+  if proto ~= "1" then
     return
   end
-  if kind == "Q" and distribution == "GUILD" then
+  if kind == "V" then
+    Leyword.NoteRemoteVersion(ymd)
+    return
+  end
+  if type(ymd) ~= "string" or not ymd:match("^%d%d%d%d%d%d%d%d$") then
+    return
+  end
+  if kind == "Q" then
+    Leyword.NoteRemoteVersion(a)
     ReplyTo(sender, ymd)
   elseif kind == "R" then
+    Leyword.NoteRemoteVersion(remoteVer)
     StoreResult(sender, ymd, a, b, pattern)
   end
 end
@@ -410,8 +489,15 @@ listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, 
     return
   end
   if event == "PLAYER_LOGIN" then
+    if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+      C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+    elseif RegisterAddonMessagePrefix then
+      RegisterAddonMessagePrefix(PREFIX)
+    end
     AskRoster()
     C_Timer.After(3, ScheduleSync)
+    C_Timer.After(20, ScheduleSync)
+    C_Timer.After(60, ScheduleSync)
     C_Timer.NewTicker(900, function()
       AskRoster()
       ScheduleSync()

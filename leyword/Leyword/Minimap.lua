@@ -11,8 +11,8 @@ button:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
 local icon = button:CreateTexture(nil, "BACKGROUND")
 icon:SetSize(20, 20)
 icon:SetPoint("CENTER", 0, 1)
-icon:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
-icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+icon:SetTexture("Interface\\AddOns\\Leyword\\Icon")
+icon:SetTexCoord(0, 1, 0, 1)
 
 local ring = button:CreateTexture(nil, "OVERLAY")
 ring:SetSize(53, 53)
@@ -103,7 +103,7 @@ local function RegisterBroker()
   Leyword._broker = ldb:NewDataObject("Leyword", {
     type = "launcher",
     text = "Leyword",
-    icon = "Interface\\Icons\\INV_Misc_Book_09",
+    icon = "Interface\\AddOns\\Leyword\\Icon",
     OnClick = function()
       Leyword_Toggle()
     end,

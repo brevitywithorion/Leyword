@@ -59,7 +59,11 @@ loader:SetScript("OnEvent", function(_, event, arg1)
     end
     loader:UnregisterEvent("ADDON_LOADED")
   elseif event == "PLAYER_LOGIN" then
-    pcall(C_ChatInfo.RegisterAddonMessagePrefix, "LEYWORD")
+    if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+      C_ChatInfo.RegisterAddonMessagePrefix("LEYWORD")
+    elseif RegisterAddonMessagePrefix then
+      RegisterAddonMessagePrefix("LEYWORD")
+    end
     if Leyword.RequestSync then
       Leyword.RequestSync()
     end

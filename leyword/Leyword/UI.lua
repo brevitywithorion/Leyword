@@ -178,6 +178,9 @@ function Leyword.Refresh()
   if not frames or not frames.main:IsShown() then
     return
   end
+  if frames.versionWarn then
+    frames.versionWarn:SetShown(Leyword.outdated and true or false)
+  end
   local reviewing = Leyword.review
   local cur = reviewing or Leyword.Round()
   local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
@@ -400,6 +403,11 @@ local function Build()
   end
   title:SetText("LEYWORD")
   title:SetTextColor(1, 0.82, 0.2)
+  local versionWarn = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+  versionWarn:SetPoint("TOP", frame, "TOP", 0, -4)
+  versionWarn:SetText("Leyword is out of date. Update on CurseForge.")
+  versionWarn:SetTextColor(1, 0.45, 0.35)
+  versionWarn:Hide()
   AddEscape("LeywordFrame")
   local anchor = frame.Inset or frame
   local puzzleTab = CreateFrame("Button", "LeywordPuzzleTab", frame, "UIPanelButtonTemplate")
@@ -823,6 +831,7 @@ local function Build()
     stats = stats,
     result = result,
     number = number,
+    versionWarn = versionWarn,
     guildScroll = scroll,
     guildContent = content,
     guildRows = guildRows,
