@@ -184,12 +184,12 @@ function Leyword.BroadcastResult()
   end
 end
 
-function Leyword.SyncGuild()
+function Leyword.SyncGuild(force)
   if not IsInGuild() then
     return
   end
   local now = time()
-  if (now - (LeywordDB.lastQuery or 0)) < 20 then
+  if not force and (now - (LeywordDB.lastQuery or 0)) < 20 then
     return
   end
   LeywordDB.lastQuery = now

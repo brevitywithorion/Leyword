@@ -38,20 +38,28 @@ function Leyword.ApplyTile(tile, letter, mark)
 end
 
 function Leyword.ApplyKey(button, mark)
+  button.leywordMark = mark
+  local swatch = button.leywordSwatch
+  if not swatch then
+    swatch = button:CreateTexture(nil, "ARTWORK", nil, 7)
+    swatch:SetPoint("TOPLEFT", 2, -2)
+    swatch:SetPoint("BOTTOMRIGHT", -2, 2)
+    swatch:SetTexture("Interface\\Buttons\\WHITE8X8")
+    button.leywordSwatch = swatch
+  end
   local label = button.leywordLabel or button:GetFontString()
-  local tex = button:GetNormalTexture()
+  if label and label.SetDrawLayer then
+    label:SetDrawLayer("OVERLAY", 7)
+  end
   local color = mark and Leyword.Palette()[mark]
   if color then
-    if tex then
-      tex:SetVertexColor(color[1] + 0.2, color[2] + 0.2, color[3] + 0.2)
-    end
+    swatch:Show()
+    swatch:SetVertexColor(color[1], color[2], color[3], 1)
     if label then
-      label:SetTextColor(math.min(1, color[1] + 0.45), math.min(1, color[2] + 0.45), math.min(1, color[3] + 0.45))
+      label:SetTextColor(0.98, 0.96, 0.9)
     end
   else
-    if tex then
-      tex:SetVertexColor(1, 1, 1)
-    end
+    swatch:Hide()
     if label then
       label:SetTextColor(1, 0.95, 0.78)
     end
@@ -206,11 +214,13 @@ function Leyword.Refresh()
   for i = 1, #cur.guesses do
     local guess = cur.guesses[i]
     local state = cur.states[i]
-    for col = 1, 5 do
-      local ch = guess:sub(col, col):upper()
-      local mark = state:sub(col, col)
-      if not best[ch] or rank[mark] > rank[best[ch]] then
-        best[ch] = mark
+    if type(guess) == "string" and type(state) == "string" then
+      for col = 1, 5 do
+        local ch = guess:sub(col, col):upper()
+        local mark = state:sub(col, col)
+        if rank[mark] and (not best[ch] or rank[mark] > rank[best[ch]]) then
+          best[ch] = mark
+        end
       end
     end
   end
@@ -315,7 +325,7 @@ function Leyword.RefreshGuild()
   if not IsInGuild() then
     frames.guildEmpty:SetText("Join a guild to compare today's score and grid.")
   elseif #rows == 0 then
-    frames.guildEmpty:SetText("No guild results yet. Scores sync when a guildmate logs on, and again every 15 minutes.")
+    frames.guildEmpty:SetText("No guild results yet. Press Sync, or wait for a guildmate to log on.")
   else
     frames.guildEmpty:SetText("")
   end
@@ -630,6 +640,12 @@ local function Build()
         box:SetText(((box:GetText() or "") .. letter):sub(1, 5))
         box:SetFocus()
       end)
+      key:HookScript("OnEnter", function(self)
+        Leyword.ApplyKey(self, self.leywordMark)
+      end)
+      key:HookScript("OnLeave", function(self)
+        Leyword.ApplyKey(self, self.leywordMark)
+      end)
       keys[letter] = key
     end
   end
@@ -648,8 +664,31 @@ local function Build()
   local guildNote = guild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
   guildNote:SetPoint("TOPLEFT", 8, -2)
   guildNote:SetText("Today")
+  local guildSync = CreateFrame("Button", "LeywordGuildSyncButton", guild, "UIPanelButtonTemplate")
+  guildSync:SetSize(70, 22)
+  guildSync:SetPoint("TOPRIGHT", -28, 0)
+  guildSync:SetText("Sync")
+  guildSync:SetScript("OnClick", function()
+    if not IsInGuild() then
+      return
+    end
+    if C_GuildInfo and C_GuildInfo.GuildRoster then
+      pcall(C_GuildInfo.GuildRoster)
+    elseif GuildRoster then
+      pcall(GuildRoster)
+    end
+    if Leyword.SyncGuild then
+      Leyword.SyncGuild(true)
+    end
+    guildNote:SetText("Syncing...")
+    C_Timer.After(2, function()
+      if guildNote:GetText() == "Syncing..." then
+        guildNote:SetText("Today")
+      end
+    end)
+  end)
   local scroll = CreateFrame("ScrollFrame", "LeywordGuildScroll", guild, "UIPanelScrollFrameTemplate")
-  scroll:SetPoint("TOPLEFT", 4, -22)
+  scroll:SetPoint("TOPLEFT", 4, -28)
   scroll:SetPoint("BOTTOMRIGHT", -26, 4)
   local content = CreateFrame("Frame", nil, scroll)
   content:SetSize(280, 40)
@@ -872,6 +911,7 @@ local function Build()
     number = number,
     versionWarn = versionWarn,
     guildScroll = scroll,
+    guildSync = guildSync,
     guildContent = content,
     guildRows = guildRows,
     guildEmpty = empty,
