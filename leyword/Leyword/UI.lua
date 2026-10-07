@@ -369,6 +369,10 @@ function Leyword.RefreshHistory()
   frames.pastContent:SetHeight(math.max(40, math.min(#history, #frames.pastRows) * 26))
 end
 
+local SUGGESTIONS = {
+  "Maro",
+}
+
 local function Build()
   local frame = CreateFrame("Frame", "LeywordFrame", UIParent, "BasicFrameTemplateWithInset")
   frame:SetSize(470, 748)
@@ -521,6 +525,33 @@ local function Build()
   closeFeedback:SetSize(80, 22)
   closeFeedback:SetPoint("BOTTOM", 0, 14)
   closeFeedback:SetText("Close")
+  local thanks = CreateFrame("Button", "LeywordThanksButton", frame, "UIPanelButtonTemplate")
+  thanks:SetSize(70, 22)
+  thanks:SetPoint("RIGHT", feedback, "LEFT", -6, 0)
+  thanks:SetText("Thanks")
+  local thanksPopup = CreateFrame("Frame", "LeywordThanks", UIParent, "BasicFrameTemplateWithInset")
+  thanksPopup:SetSize(260, 78 + #SUGGESTIONS * 18)
+  thanksPopup:SetPoint("CENTER")
+  thanksPopup:SetFrameStrata("DIALOG")
+  thanksPopup:SetFrameLevel(400)
+  thanksPopup:SetToplevel(true)
+  thanksPopup:Hide()
+  if thanksPopup.TitleText then
+    thanksPopup.TitleText:SetText("Suggestions")
+  end
+  AddEscape("LeywordThanks")
+  local thanksHint = thanksPopup:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+  thanksHint:SetPoint("TOP", 0, -32)
+  thanksHint:SetText("Suggestion givers")
+  for i = 1, #SUGGESTIONS do
+    local line = thanksPopup:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    line:SetPoint("TOP", 0, -50 - (i - 1) * 18)
+    line:SetText(SUGGESTIONS[i])
+  end
+  local closeThanks = CreateFrame("Button", "LeywordThanksClose", thanksPopup, "UIPanelButtonTemplate")
+  closeThanks:SetSize(80, 22)
+  closeThanks:SetPoint("BOTTOM", 0, 14)
+  closeThanks:SetText("Close")
   local menu = CreateFrame("Frame", "LeywordShareMenu", frame, "BackdropTemplate")
   menu:SetSize(196, 58)
   menu:SetPoint("BOTTOMRIGHT", share, "TOPRIGHT", 0, 4)
@@ -733,8 +764,15 @@ local function Build()
   closeFeedback:SetScript("OnClick", function()
     popup:Hide()
   end)
+  thanks:SetScript("OnClick", function()
+    thanksPopup:SetShown(not thanksPopup:IsShown())
+  end)
+  closeThanks:SetScript("OnClick", function()
+    thanksPopup:Hide()
+  end)
   frame:HookScript("OnHide", function()
     popup:Hide()
+    thanksPopup:Hide()
   end)
   colorblind:SetScript("OnClick", function(self)
     LeywordDB.settings.colorblind = self:GetChecked() and true or false
@@ -816,6 +854,7 @@ local function Build()
     another = another,
     today = today,
     feedback = feedback,
+    thanks = thanks,
     shareMenu = menu,
     channels = channels,
     back = back,

@@ -57,6 +57,7 @@ function Leyword.ApplyBuiltinSkins()
         Try(skins.HandleButton, skins, frames.another)
         Try(skins.HandleButton, skins, frames.today)
         Try(skins.HandleButton, skins, frames.feedback)
+        Try(skins.HandleButton, skins, frames.thanks)
         if frames.channels then
           for i = 1, #frames.channels do
             Try(skins.HandleButton, skins, frames.channels[i])
@@ -82,6 +83,7 @@ function Leyword.ApplyBuiltinSkins()
       Try(T.SkinButton, frames.another)
       Try(T.SkinButton, frames.today)
       Try(T.SkinButton, frames.feedback)
+      Try(T.SkinButton, frames.thanks)
       if frames.channels then
         for i = 1, #frames.channels do
           Try(T.SkinButton, frames.channels[i])
@@ -152,6 +154,7 @@ function Leyword.ApplyEllesmere(skin)
   call("Button", frames.another)
   call("Button", frames.today)
   call("Button", frames.feedback)
+  call("Button", frames.thanks)
   if frames.channels then
     for i = 1, #frames.channels do
       call("Button", frames.channels[i])
