@@ -394,7 +394,6 @@ local function ReplyTo(sender, ymd)
     return
   end
   Leyword.Enqueue(ResultMessage(entry), "WHISPER", sender)
-  PostChat(ScoreChat(entry))
 end
 
 local function OnAddonMessage(_, message, distribution, sender)
