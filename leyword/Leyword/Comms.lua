@@ -26,7 +26,7 @@ local function RememberStatus(text)
 end
 
 local function PostChat(text)
-  if type(text) ~= "string" or not IsInGuild() or not SendChatMessage then
+  if type(text) ~= "string" or not IsInGuild() then
     return false
   end
   local now = time()
@@ -35,13 +35,50 @@ local function PostChat(text)
   end
   Leyword._lastChat = text
   Leyword._lastChatAt = now
-  local ok = pcall(SendChatMessage, text, "GUILD")
-  if ok then
-    RememberStatus("Sent on guild chat.")
+  local ok, err
+  if C_ChatInfo and C_ChatInfo.SendChatMessage then
+    ok, err = pcall(C_ChatInfo.SendChatMessage, text, "GUILD")
+  elseif SendChatMessage then
+    ok, err = pcall(SendChatMessage, text, "GUILD")
   else
-    RememberStatus("Guild chat could not send.")
+    RememberStatus("No guild chat function on this client.")
+    return false
   end
-  return ok
+  if not ok then
+    RememberStatus("Guild chat could not send: " .. tostring(err))
+    return false
+  end
+  RememberStatus("Said Leyword sync in guild chat.")
+  return true
+end
+
+local function PingAddon(msg)
+  if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+    C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+  elseif RegisterAddonMessagePrefix then
+    RegisterAddonMessagePrefix(PREFIX)
+  end
+  if not C_ChatInfo or not C_ChatInfo.SendAddonMessage then
+    RememberStatus("This client has no SendAddonMessage.")
+    return false
+  end
+  local ok, result = pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "GUILD")
+  local note
+  if not ok then
+    note = "SendAddonMessage error: " .. tostring(result)
+  elseif type(result) == "number" and result ~= 0 then
+    note = "SendAddonMessage: " .. (ADDON_RESULT[result] or ("code " .. tostring(result)))
+    if C_ChatInfo.SendAddonMessageLogged then
+      local ok2, result2 = pcall(C_ChatInfo.SendAddonMessageLogged, PREFIX, msg, "GUILD")
+      if ok2 and (result2 == nil or result2 == 0) then
+        note = note .. ". Logged addon channel accepted it."
+      end
+    end
+  else
+    note = "SendAddonMessage accepted. Your guildmate needs to press Sync too."
+  end
+  RememberStatus(note)
+  return ok and (type(result) ~= "number" or result == 0)
 end
 
 local function Transmit(msg, chatType, target)
@@ -222,11 +259,11 @@ end
 local function ScoreChat(cur)
   local score = cur.done == "win" and tostring(#cur.guesses) or "0"
   local label = cur.done == "win" and (score .. "/6") or "X/6"
-  return "Leyword " .. label .. " [LW1:" .. ResultMessage(cur) .. "]"
+  return "Leyword " .. label .. " [LW1:" .. ResultMessage(cur):gsub("|", ":") .. "]"
 end
 
 local function AskChat(ymd)
-  return "Leyword checking scores [LW1:1|Q|" .. ymd .. "|" .. Leyword.AddonVersion() .. "]"
+  return "Leyword checking scores [LW1:1:Q:" .. ymd .. ":" .. Leyword.AddonVersion() .. "]"
 end
 
 function Leyword.BroadcastResult()
@@ -252,24 +289,20 @@ function Leyword.SyncGuild(force)
     return
   end
   LeywordDB.lastQuery = now
-  Leyword.Enqueue("1|V|" .. Leyword.AddonVersion(), "GUILD")
   local ok, y, m, d = pcall(Leyword.Today)
   if not ok or not y then
     return
   end
   local todayKey = Leyword.DateKey(y, m, d)
   local todayEntry = FinishedFor(todayKey)
-  if todayEntry then
-    Leyword.Enqueue(ResultMessage(todayEntry), "GUILD")
-  end
-  Leyword.Enqueue("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion(), "GUILD")
-  if todayEntry then
-    PostChat(ScoreChat(todayEntry))
-    C_Timer.After(1.2, function()
+  local ping = todayEntry and ResultMessage(todayEntry) or ("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion())
+  PingAddon(ping)
+  if force then
+    if todayEntry then
+      PostChat(ScoreChat(todayEntry) .. " [LW1:1:Q:" .. todayKey .. ":" .. Leyword.AddonVersion() .. "]")
+    else
       PostChat(AskChat(todayKey))
-    end)
-  else
-    PostChat(AskChat(todayKey))
+    end
   end
   local _, number = Leyword.AnswerFor(y, m, d)
   for age = 1, 14 do
@@ -365,15 +398,13 @@ local function ReplyTo(sender, ymd)
 end
 
 local function OnAddonMessage(_, message, distribution, sender)
-  if distribution ~= "GUILD" and distribution ~= "WHISPER" then
-    return
-  end
   if type(message) ~= "string" or type(sender) ~= "string" or sender == "" then
     return
   end
   if sender:find("|", 1, true) then
     return
   end
+  RememberStatus("Heard " .. sender .. " on the addon channel.")
   local proto, kind, ymd, a, b, pattern, remoteVer = strsplit("|", message)
   if proto ~= "1" then
     return
@@ -591,19 +622,35 @@ local function HideGuildLine(msg, sender)
   if type(msg) ~= "string" then
     return false
   end
-  local payload = msg:match("%[LW1:([^%]]+)%]")
-  if not payload then
+  local found = false
+  for payload in msg:gmatch("%[LW1:([^%]]+)%]") do
+    found = true
+    if not payload:find("|", 1, true) then
+      payload = payload:gsub(":", "|")
+    end
+    if type(sender) == "string" and sender ~= "" then
+      OnAddonMessage(nil, payload, "GUILD", sender)
+    end
+  end
+  if not found then
     return false
   end
-  if type(sender) == "string" and sender ~= "" then
-    OnAddonMessage(nil, payload, "GUILD", sender)
+  if type(sender) == "string" and Leyword.IsSelf(sender) then
+    RememberStatus("Said Leyword sync in guild chat.")
+  else
+    RememberStatus("Heard " .. tostring(sender) .. " in guild chat.")
   end
-  RememberStatus("Heard a guildmate on guild chat.")
-  return true
+  return false
 end
 
 if ChatFrame_AddMessageEventFilter then
   ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD", function(_, _, msg, sender)
     return HideGuildLine(msg, sender)
   end)
+end
+
+if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
+  C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
+elseif RegisterAddonMessagePrefix then
+  RegisterAddonMessagePrefix(PREFIX)
 end

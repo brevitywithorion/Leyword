@@ -330,7 +330,7 @@ function Leyword.RefreshGuild()
     frames.guildEmpty:SetText("")
   end
   if frames.guildStatus then
-    frames.guildStatus:SetText(Leyword.syncStatus or "Press Sync while you are both online.")
+    frames.guildStatus:SetText(Leyword.syncStatus or "Press Sync to ask in guild chat.")
   end
   for i = 1, #frames.guildRows do
     local row = frames.guildRows[i]
@@ -697,7 +697,7 @@ local function Build()
   guildStatus:SetPoint("BOTTOMLEFT", 8, 4)
   guildStatus:SetPoint("BOTTOMRIGHT", -28, 4)
   guildStatus:SetJustifyH("LEFT")
-  guildStatus:SetText("Press Sync while you are both online.")
+  guildStatus:SetText("Press Sync to ask in guild chat.")
   local content = CreateFrame("Frame", nil, scroll)
   content:SetSize(280, 40)
   scroll:SetScrollChild(content)
