@@ -257,9 +257,12 @@ local function FinishedFor(ymd)
 end
 
 local function ScoreChat(cur)
-  local score = cur.done == "win" and tostring(#cur.guesses) or "0"
-  local label = cur.done == "win" and (score .. "/6") or "X/6"
-  return "Leyword " .. label .. " [LW1:" .. ResultMessage(cur):gsub("|", ":") .. "]"
+  local label = cur.done == "win" and (#cur.guesses .. "/6") or "X/6"
+  local rows = {}
+  for i = 1, #cur.states do
+    rows[i] = (cur.states[i] or ""):gsub("[^GYB]", "")
+  end
+  return "Leyword " .. label .. " " .. table.concat(rows, " ")
 end
 
 local function AskChat(ymd)
@@ -299,7 +302,7 @@ function Leyword.SyncGuild(force)
   PingAddon(ping)
   if force then
     if todayEntry then
-      PostChat(ScoreChat(todayEntry) .. " [LW1:1:Q:" .. todayKey .. ":" .. Leyword.AddonVersion() .. "]")
+      PostChat(ScoreChat(todayEntry))
     else
       PostChat(AskChat(todayKey))
     end
