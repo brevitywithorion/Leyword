@@ -257,10 +257,21 @@ local function FinishedFor(ymd)
 end
 
 local function ScoreChat(cur)
-  local label = cur.done == "win" and (#cur.guesses .. "/6") or "X/6"
   local rows = {}
   for i = 1, #cur.states do
-    rows[i] = (cur.states[i] or ""):gsub("[^GYB]", "")
+    local row = (cur.states[i] or ""):gsub("[^GYB]", "")
+    if #row == 5 then
+      rows[#rows + 1] = row
+    end
+  end
+  local expect = (cur.done == "win" and #cur.guesses or 6) * 5
+  if #table.concat(rows) ~= expect then
+    return nil
+  end
+  local label = cur.done == "win" and (#cur.guesses .. "/6") or "X/6"
+  local _, number = Leyword.AnswerFor(cur.y, cur.m, cur.d)
+  if number then
+    return string.format("Leyword %d %s %s", number, label, table.concat(rows, " "))
   end
   return "Leyword " .. label .. " " .. table.concat(rows, " ")
 end
@@ -280,7 +291,10 @@ function Leyword.BroadcastResult()
   if Leyword.Enqueue(ResultMessage(cur), "GUILD") then
     cur.shared = true
   end
-  PostChat(ScoreChat(cur))
+  local line = ScoreChat(cur)
+  if line then
+    PostChat(line)
+  end
 end
 
 function Leyword.SyncGuild(force)
@@ -300,11 +314,10 @@ function Leyword.SyncGuild(force)
   local todayEntry = FinishedFor(todayKey)
   local ping = todayEntry and ResultMessage(todayEntry) or ("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion())
   PingAddon(ping)
-  if force then
-    if todayEntry then
-      PostChat(ScoreChat(todayEntry))
-    else
-      PostChat(AskChat(todayKey))
+  if force and todayEntry then
+    local line = ScoreChat(todayEntry)
+    if line then
+      PostChat(line)
     end
   end
   local _, number = Leyword.AnswerFor(y, m, d)
@@ -345,14 +358,10 @@ local function StoreResult(sender, ymd, score, won, pattern)
     return
   end
   local wonBit = won == "1"
-  if wonBit then
-    if scoreNum ~= rows or scoreNum < 1 or scoreNum > 6 then
-      return
-    end
-    if pattern:sub(-5) ~= "GGGGG" then
-      return
-    end
-  elseif scoreNum ~= 0 or rows ~= 6 or pattern:sub(-5) == "GGGGG" then
+  if wonBit and (not scoreNum or scoreNum < 1 or scoreNum > 6) then
+    scoreNum = rows
+  end
+  if not wonBit and rows < 1 then
     return
   end
   local py, pm, pd = Leyword.ParseKey(ymd)
@@ -583,6 +592,9 @@ listener:RegisterEvent("PLAYER_LOGIN")
 listener:RegisterEvent("GUILD_ROSTER_UPDATE")
 listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, sender)
   if event == "CHAT_MSG_ADDON" then
+    if Leyword.spy then
+      print("|cffd4a85aLeyword spy|r " .. tostring(prefix) .. " " .. tostring(message) .. " via " .. tostring(distribution) .. " from " .. tostring(sender))
+    end
     if prefix ~= PREFIX then
       return
     end
@@ -620,34 +632,108 @@ listener:SetScript("OnEvent", function(_, event, prefix, message, distribution, 
   end)
 end)
 
-local function HideGuildLine(msg, sender)
-  if type(msg) ~= "string" then
-    return false
-  end
-  local found = false
-  for payload in msg:gmatch("%[LW1:([^%]]+)%]") do
-    found = true
-    if not payload:find("|", 1, true) then
-      payload = payload:gsub(":", "|")
+local function ColoredRows(pattern)
+  local palette = (Leyword.Palette and Leyword.Palette()) or (Leyword.Colors and Leyword.Colors.normal) or {
+    G = { 0.247, 0.420, 0.271 },
+    Y = { 0.651, 0.518, 0.184 },
+    B = { 0.431, 0.369, 0.306 },
+  }
+  local lines = {}
+  for i = 1, #pattern, 5 do
+    local bits = {}
+    for p = 0, 4 do
+      local color = palette[pattern:sub(i + p, i + p)]
+      if color then
+        bits[#bits + 1] = string.format(
+          "|TInterface\\Buttons\\WHITE8X8:8:8:1:0:8:8:0:8:0:8:%d:%d:%d|t",
+          math.floor(color[1] * 255 + 0.5),
+          math.floor(color[2] * 255 + 0.5),
+          math.floor(color[3] * 255 + 0.5)
+        )
+      end
     end
-    if type(sender) == "string" and sender ~= "" then
-      OnAddonMessage(nil, payload, "GUILD", sender)
+    lines[#lines + 1] = table.concat(bits)
+  end
+  return table.concat(lines, " ")
+end
+
+local function IngestGuildLine(msg, sender)
+  if type(msg) ~= "string" or msg:sub(1, 8) ~= "Leyword " then
+    return nil
+  end
+  local number, label, rest = msg:match("^Leyword (%d+) ([%dX]/6)%s+([GYB ]+)$")
+  if not label then
+    label, rest = msg:match("^Leyword ([%dX]/6)%s+([GYB ]+)$")
+  end
+  if not label or not rest then
+    return nil
+  end
+  local rows = {}
+  for token in rest:gmatch("[GYB]+") do
+    if #token == 5 then
+      rows[#rows + 1] = token
     end
   end
-  if not found then
-    return false
+  if #rows < 1 then
+    return nil
   end
-  if type(sender) == "string" and Leyword.IsSelf(sender) then
-    RememberStatus("Said Leyword sync in guild chat.")
+  local pattern = table.concat(rows)
+  local scoreNum = tonumber(label:match("^(%d)/6$"))
+  local won = scoreNum and "1" or "0"
+  local score = scoreNum and tostring(scoreNum) or "0"
+  local ymd
+  if number and Leyword.YmdFromNumber then
+    local y, m, d = Leyword.YmdFromNumber(tonumber(number))
+    if y then
+      ymd = Leyword.DateKey(y, m, d)
+    end
+  end
+  if not ymd then
+    local ok, y, m, d = pcall(Leyword.Today)
+    if ok and y then
+      ymd = Leyword.DateKey(y, m, d)
+    end
+  end
+  if ymd and type(sender) == "string" and sender ~= "" and not sender:find("|", 1, true) then
+    StoreResult(sender, ymd, score, won, pattern)
+  end
+  local head = number and ("Leyword " .. number .. " " .. label) or ("Leyword " .. label)
+  return head .. " " .. ColoredRows(pattern)
+end
+
+function Leyword.PingDebug()
+  local function report(label, ok, result)
+    if not ok then
+      print("|cffd4a85aLeyword ping|r " .. label .. " error: " .. tostring(result))
+    else
+      print("|cffd4a85aLeyword ping|r " .. label .. " result " .. tostring(result))
+    end
+  end
+  if not C_ChatInfo or not C_ChatInfo.SendAddonMessage then
+    print("|cffd4a85aLeyword ping|r no SendAddonMessage on this client.")
+    return
+  end
+  if C_ChatInfo.RegisterAddonMessagePrefix then
+    print("|cffd4a85aLeyword ping|r register " .. tostring(C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)))
+  end
+  local msg = "1|V|" .. Leyword.AddonVersion()
+  report("GUILD", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "GUILD"))
+  report("WHISPER self", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "WHISPER", UnitName("player")))
+  local id = GetChannelName and GetChannelName("leyword")
+  if type(id) == "number" and id > 0 then
+    report("CHANNEL", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "CHANNEL", id))
   else
-    RememberStatus("Heard " .. tostring(sender) .. " in guild chat.")
+    print("|cffd4a85aLeyword ping|r CHANNEL skipped. /join leyword then /lw ping again.")
   end
-  return false
 end
 
 if ChatFrame_AddMessageEventFilter then
-  ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD", function(_, _, msg, sender)
-    return HideGuildLine(msg, sender)
+  ChatFrame_AddMessageEventFilter("CHAT_MSG_GUILD", function(_, _, msg, sender, ...)
+    local colored = IngestGuildLine(msg, sender)
+    if not colored then
+      return false
+    end
+    return false, colored, sender, ...
   end)
 end
 

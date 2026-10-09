@@ -120,6 +120,15 @@ SlashCmdList.LEYWORD = function(msg)
   elseif msg == "test" then
     Leyword.SelfTest()
     return
+  elseif msg == "spy" then
+    Leyword.spy = not Leyword.spy
+    print("|cffd4a85aLeyword|r spy " .. (Leyword.spy and "on. Every addon message will print." or "off."))
+    return
+  elseif msg == "ping" then
+    if Leyword.PingDebug then
+      Leyword.PingDebug()
+    end
+    return
   end
   Leyword_Toggle()
 end
