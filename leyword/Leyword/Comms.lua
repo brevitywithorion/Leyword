@@ -323,6 +323,10 @@ function Leyword.SyncGuild(force)
   end
   local todayKey = Leyword.DateKey(y, m, d)
   local todayEntry = FinishedFor(todayKey)
+  local cur = LeywordDB.current
+  if (not todayEntry) and cur and not cur.extra and cur.done ~= "play" and cur.date == todayKey then
+    todayEntry = cur
+  end
   local ping = todayEntry and ResultMessage(todayEntry) or ("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion())
   PingAddon(ping)
   if force and todayEntry then
@@ -362,6 +366,7 @@ local function StoreResult(sender, ymd, score, won, pattern)
     return
   end
   if type(pattern) ~= "string" or not pattern:match("^([GYB][GYB][GYB][GYB][GYB])+$") then
+    RememberStatus(Leyword.NameKey(sender) .. " score dropped: bad grid")
     return
   end
   local rows = #pattern / 5
@@ -388,25 +393,37 @@ local function StoreResult(sender, ymd, score, won, pattern)
   end
   local key = Leyword.NameKey(sender)
   if key == "" then
+    RememberStatus("Score arrived with no name.")
     return
   end
-  LeywordDB.guild[ymd] = LeywordDB.guild[ymd] or {}
-  local bucket = LeywordDB.guild[ymd]
-  if not bucket[key] then
-    local n = 0
-    for _ in pairs(bucket) do
-      n = n + 1
-    end
-    if n >= 80 then
-      return
-    end
-  end
-  bucket[key] = {
+  local info = {
     score = wonBit and scoreNum or 0,
     won = wonBit,
     pattern = pattern,
     t = time(),
   }
+  local function Write(bucketKey)
+    LeywordDB.guild[bucketKey] = LeywordDB.guild[bucketKey] or {}
+    local bucket = LeywordDB.guild[bucketKey]
+    if not bucket[key] then
+      local n = 0
+      for _ in pairs(bucket) do
+        n = n + 1
+      end
+      if n >= 80 then
+        return
+      end
+    end
+    bucket[key] = info
+  end
+  Write(ymd)
+  if ok and ty then
+    local age = Leyword.Rdn(ty, tm, td) - Leyword.Rdn(py, pm, pd)
+    if age >= -1 and age <= 1 then
+      Write(Leyword.DateKey(ty, tm, td))
+    end
+  end
+  RememberStatus("Saved " .. key .. " " .. (wonBit and ((scoreNum or rows) .. "/6") or "X/6"))
   if Leyword.RefreshGuild then
     Leyword.RefreshGuild()
   end
@@ -417,6 +434,10 @@ local function ReplyTo(sender, ymd)
     return
   end
   local entry = FinishedFor(ymd)
+  local cur = LeywordDB.current
+  if (not entry) and cur and not cur.extra and cur.done ~= "play" and cur.date == ymd then
+    entry = cur
+  end
   if not entry then
     return
   end
@@ -430,24 +451,30 @@ local function OnAddonMessage(_, message, distribution, sender)
   if sender:find("|", 1, true) then
     return
   end
-  RememberStatus("Heard " .. sender .. " on the addon channel.")
+  local who = Leyword.NameKey(sender)
   local proto, kind, ymd, a, b, pattern, remoteVer = strsplit("|", message)
   if proto ~= "1" then
+    RememberStatus(who .. " sent an unknown addon message.")
     return
   end
   if kind == "V" then
     Leyword.NoteRemoteVersion(ymd)
+    RememberStatus(who .. " is on " .. tostring(ymd))
     return
   end
   if type(ymd) ~= "string" or not ymd:match("^%d%d%d%d%d%d%d%d$") then
+    RememberStatus(who .. " sent a message with no date.")
     return
   end
   if kind == "Q" then
     Leyword.NoteRemoteVersion(a)
+    RememberStatus(who .. " asked for scores, but sent none.")
     ReplyTo(sender, ymd)
   elseif kind == "R" then
     Leyword.NoteRemoteVersion(remoteVer)
     StoreResult(sender, ymd, a, b, pattern)
+  else
+    RememberStatus(who .. " sent " .. tostring(kind))
   end
 end
 

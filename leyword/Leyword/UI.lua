@@ -305,20 +305,36 @@ function Leyword.RefreshGuild()
     }
     seen[ShortName(cur.character)] = true
   end
-  local bucket = cur and LeywordDB.guild[cur.date]
-  if bucket then
+  local function AddBucket(bucket)
+    if type(bucket) ~= "table" then
+      return
+    end
     for sender, info in pairs(bucket) do
       local name = ShortName(sender)
       if name ~= "" and not seen[name] and not (Leyword.IsSelf and Leyword.IsSelf(sender)) then
+        seen[name] = true
         rows[#rows + 1] = {
-          name = ShortName(sender),
-          sort = sender,
+          name = name,
+          sort = name,
           score = info.won and info.score or 99,
           label = info.won and (info.score .. "/6") or "X/6",
           pattern = info.pattern,
         }
       end
     end
+  end
+  local todayKey
+  if Leyword.Today and Leyword.DateKey then
+    local ok, y, m, d = pcall(Leyword.Today)
+    if ok and y then
+      todayKey = Leyword.DateKey(y, m, d)
+    end
+  end
+  if todayKey and LeywordDB.guild then
+    AddBucket(LeywordDB.guild[todayKey])
+  end
+  if cur and cur.date and cur.date ~= todayKey and LeywordDB.guild then
+    AddBucket(LeywordDB.guild[cur.date])
   end
   table.sort(rows, function(a, b)
     if a.score ~= b.score then
