@@ -117,7 +117,7 @@ local function Arm(delay)
     if not drop then
       local ok, result = pcall(Transmit, item.msg, item.chat, item.target)
       local failed = (not ok) or (type(result) == "number" and result ~= 0)
-      if item.chat == "GUILD" and item.msg:sub(1, 4) == "1|V|" then
+      if item.chat == "GUILD" and (item.msg:sub(1, 4) == "1;V;" or item.msg:sub(1, 4) == "1|V|") then
         local note
         if not ok then
           note = "addon channel error"
@@ -246,7 +246,7 @@ end
 local function ResultMessage(cur)
   local won = cur.done == "win" and "1" or "0"
   local score = cur.done == "win" and tostring(#cur.guesses) or "0"
-  return string.format("1|R|%s|%s|%s|%s|%s", cur.date, score, won, table.concat(cur.states), Leyword.AddonVersion())
+  return string.format("1;R;%s;%s;%s;%s;%s", cur.date, score, won, table.concat(cur.states), Leyword.AddonVersion())
 end
 
 local function FinishedFor(ymd)
@@ -327,7 +327,7 @@ function Leyword.SyncGuild(force)
   if (not todayEntry) and cur and not cur.extra and cur.done ~= "play" and cur.date == todayKey then
     todayEntry = cur
   end
-  local ping = todayEntry and ResultMessage(todayEntry) or ("1|Q|" .. todayKey .. "|" .. Leyword.AddonVersion())
+  local ping = todayEntry and ResultMessage(todayEntry) or ("1;Q;" .. todayKey .. ";" .. Leyword.AddonVersion())
   PingAddon(ping)
   if force and todayEntry then
     local line = ScoreChat(todayEntry)
@@ -365,10 +365,17 @@ local function StoreResult(sender, ymd, score, won, pattern)
   if won ~= "0" and won ~= "1" then
     return
   end
-  if type(pattern) ~= "string" or not pattern:match("^([GYB][GYB][GYB][GYB][GYB])+$") then
+  if type(pattern) ~= "string" then
     RememberStatus(Leyword.NameKey(sender) .. " score dropped: bad grid")
     return
   end
+  local letters = pattern:upper():gsub("[^GYB]", "")
+  local keep = math.floor(#letters / 5) * 5
+  if keep < 5 or keep > 30 then
+    RememberStatus(Leyword.NameKey(sender) .. " score dropped: bad grid " .. pattern:sub(1, 24))
+    return
+  end
+  pattern = letters:sub(1, keep)
   local rows = #pattern / 5
   if rows ~= math.floor(rows) or rows < 1 or rows > 6 then
     return
@@ -452,7 +459,8 @@ local function OnAddonMessage(_, message, distribution, sender)
     return
   end
   local who = Leyword.NameKey(sender)
-  local proto, kind, ymd, a, b, pattern, remoteVer = strsplit("|", message)
+  local sep = message:find(";", 1, true) and ";" or "|"
+  local proto, kind, ymd, a, b, pattern, remoteVer = strsplit(sep, message)
   if proto ~= "1" then
     RememberStatus(who .. " sent an unknown addon message.")
     return
@@ -758,7 +766,7 @@ function Leyword.PingDebug()
   if C_ChatInfo.RegisterAddonMessagePrefix then
     print("|cffd4a85aLeyword ping|r register " .. tostring(C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)))
   end
-  local msg = "1|V|" .. Leyword.AddonVersion()
+  local msg = "1;V;" .. Leyword.AddonVersion()
   report("GUILD", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "GUILD"))
   report("WHISPER self", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "WHISPER", UnitName("player")))
   local id = GetChannelName and GetChannelName("leyword")
