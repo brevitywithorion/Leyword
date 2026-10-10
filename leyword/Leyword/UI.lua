@@ -336,6 +336,23 @@ function Leyword.RefreshGuild()
   if cur and cur.date and cur.date ~= todayKey and LeywordDB.guild then
     AddBucket(LeywordDB.guild[cur.date])
   end
+  local full = {}
+  for i = 1, #rows do
+    local first = rows[i].name:match("^(%S+) ")
+    if first then
+      full[first:lower()] = true
+    end
+  end
+  if next(full) then
+    local kept = {}
+    for i = 1, #rows do
+      local only = rows[i].name:match("^(%S+)$")
+      if not (only and full[only:lower()]) then
+        kept[#kept + 1] = rows[i]
+      end
+    end
+    rows = kept
+  end
   table.sort(rows, function(a, b)
     if a.score ~= b.score then
       return a.score < b.score

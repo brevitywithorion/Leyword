@@ -198,9 +198,17 @@ end
 function Leyword.NameKey(sender)
   sender = tostring(sender or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
   sender = sender:match("^%s*(.-)%s*$") or ""
-  local short = sender:match("^(.-)%-[^ ]+$")
-  if short and short ~= "" then
-    sender = short
+  local spaced, _realm = sender:match("^(.- .*)%-([^ ]+)$")
+  if spaced and spaced ~= "" then
+    return spaced
+  end
+  local first, second = sender:match("^([^ ]+)%-([^ ]+)$")
+  if first and second then
+    local myRealm = GetRealmName()
+    if myRealm and second:lower() == myRealm:lower() then
+      return first
+    end
+    return first .. " " .. second
   end
   return sender
 end
@@ -210,15 +218,25 @@ function Leyword.IsSelf(sender)
   if key == "" then
     return false
   end
-  local unit = UnitName("player")
-  if unit and Leyword.NameKey(unit) == key then
+  local function Same(other)
+    if not other or other == "" then
+      return false
+    end
+    other = Leyword.NameKey(other)
+    if other:lower() == key:lower() then
+      return true
+    end
+    local short = key:match("^(%S+)$")
+    local long = other:match("^(%S+) ")
+    if short and long and short:lower() == long:lower() then
+      return true
+    end
+    return false
+  end
+  if Same(UnitName("player")) or Same(UnitFullName("player")) or Same(MyName()) then
     return true
   end
-  local full = UnitFullName("player")
-  if full and Leyword.NameKey(full) == key then
-    return true
-  end
-  return Leyword.NameKey(MyName()) == key
+  return false
 end
 
 function Leyword.PruneGuild()
