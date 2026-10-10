@@ -92,6 +92,9 @@ local function GridText(pattern)
 end
 
 local function ShortName(sender)
+  if Leyword.NameKey then
+    return Leyword.NameKey(sender)
+  end
   sender = tostring(sender or ""):gsub("|", "")
   if Ambiguate then
     return Ambiguate(sender, "short")
@@ -300,12 +303,13 @@ function Leyword.RefreshGuild()
       label = cur.done == "win" and (#cur.guesses .. "/6") or "X/6",
       pattern = pattern,
     }
-    seen[cur.character] = true
+    seen[ShortName(cur.character)] = true
   end
   local bucket = cur and LeywordDB.guild[cur.date]
   if bucket then
     for sender, info in pairs(bucket) do
-      if not seen[sender] and not Leyword.IsSelf(sender) then
+      local name = ShortName(sender)
+      if name ~= "" and not seen[name] and not (Leyword.IsSelf and Leyword.IsSelf(sender)) then
         rows[#rows + 1] = {
           name = ShortName(sender),
           sort = sender,
@@ -713,7 +717,9 @@ local function Build()
     row:SetPoint("TOPLEFT", 4, -(i - 1) * 54)
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     row.name:SetPoint("TOPLEFT", 0, -2)
+    row.name:SetWidth(150)
     row.name:SetJustifyH("LEFT")
+    row.name:SetWordWrap(false)
     row.score = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     row.score:SetPoint("TOPLEFT", 0, -18)
     row.grid = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -861,6 +867,9 @@ local function Build()
   end)
   guildTab:SetScript("OnClick", function()
     ShowPage("guild")
+    if Leyword.RefreshGuild then
+      Leyword.RefreshGuild()
+    end
   end)
   pastTab:SetScript("OnClick", function()
     ShowPage("past")
@@ -953,5 +962,6 @@ function Leyword.Toggle()
   else
     frame:Show()
     frame:Raise()
+    Leyword.Refresh()
   end
 end

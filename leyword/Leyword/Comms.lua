@@ -195,19 +195,30 @@ local function MyName()
   return (name or "") .. "-" .. (realm or "")
 end
 
+function Leyword.NameKey(sender)
+  sender = tostring(sender or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+  sender = sender:match("^%s*(.-)%s*$") or ""
+  local short = sender:match("^(.-)%-[^ ]+$")
+  if short and short ~= "" then
+    sender = short
+  end
+  return sender
+end
+
 function Leyword.IsSelf(sender)
-  local full = MyName()
-  if sender == full then
+  local key = Leyword.NameKey(sender)
+  if key == "" then
+    return false
+  end
+  local unit = UnitName("player")
+  if unit and Leyword.NameKey(unit) == key then
     return true
   end
-  local short = sender:match("^[^-]+")
-  local mine = full:match("^[^-]+")
-  local myRealm = full:match("^[^%-]+%-(.+)$")
-  local theirRealm = sender:match("^[^%-]+%-(.+)$")
-  if short and short == mine and (not theirRealm or theirRealm == myRealm) then
+  local full = UnitFullName("player")
+  if full and Leyword.NameKey(full) == key then
     return true
   end
-  return false
+  return Leyword.NameKey(MyName()) == key
 end
 
 function Leyword.PruneGuild()
@@ -375,9 +386,13 @@ local function StoreResult(sender, ymd, score, won, pattern)
       return
     end
   end
+  local key = Leyword.NameKey(sender)
+  if key == "" then
+    return
+  end
   LeywordDB.guild[ymd] = LeywordDB.guild[ymd] or {}
   local bucket = LeywordDB.guild[ymd]
-  if not bucket[sender] then
+  if not bucket[key] then
     local n = 0
     for _ in pairs(bucket) do
       n = n + 1
@@ -386,14 +401,14 @@ local function StoreResult(sender, ymd, score, won, pattern)
       return
     end
   end
-  bucket[sender] = {
+  bucket[key] = {
     score = wonBit and scoreNum or 0,
     won = wonBit,
     pattern = pattern,
     t = time(),
   }
-  if Leyword.Refresh then
-    Leyword.Refresh()
+  if Leyword.RefreshGuild then
+    Leyword.RefreshGuild()
   end
 end
 
