@@ -264,7 +264,16 @@ end
 local function ResultMessage(cur)
   local won = cur.done == "win" and "1" or "0"
   local score = cur.done == "win" and tostring(#cur.guesses) or "0"
-  return string.format("1;R;%s;%s;%s;%s;%s", cur.date, score, won, table.concat(cur.states), Leyword.AddonVersion())
+  local pattern = table.concat(cur.states):gsub("[^GYB]", "")
+  local name = UnitFullName("player")
+  if not name or name == "" then
+    name = MyName()
+  end
+  name = Leyword.NameKey(name):gsub("[^%w ]", "")
+  if name == "" then
+    name = "Player"
+  end
+  return string.format("R%sS%sW%sP%sN%s", cur.date, score, won, pattern, name)
 end
 
 local function FinishedFor(ymd)
@@ -363,15 +372,6 @@ function Leyword.SyncGuild(force)
       end
     end
   end
-  if todayEntry and GetNumGuildMembers and GetGuildRosterInfo then
-    local count = GetNumGuildMembers()
-    for i = 1, count do
-      local name, _, _, _, _, _, _, _, isOnline = GetGuildRosterInfo(i)
-      if type(name) == "string" and isOnline and not Leyword.IsSelf(name) then
-        Leyword.Enqueue(ResultMessage(todayEntry), "WHISPER", name)
-      end
-    end
-  end
 end
 
 function Leyword.RequestSync()
@@ -466,7 +466,7 @@ local function ReplyTo(sender, ymd)
   if not entry then
     return
   end
-  Leyword.Enqueue(ResultMessage(entry), "WHISPER", sender)
+  Leyword.Enqueue(ResultMessage(entry), "GUILD")
 end
 
 local function OnAddonMessage(_, message, distribution, sender)
@@ -477,28 +477,34 @@ local function OnAddonMessage(_, message, distribution, sender)
     return
   end
   local who = Leyword.NameKey(sender)
+  local ymd, score, won, pattern, embedded = message:match("R(%d%d%d%d%d%d%d%d)S(%d+)W([01])P([GYB]+)N([%w ]+)")
+  if ymd then
+    StoreResult(embedded ~= "" and embedded or sender, ymd, score, won, pattern)
+    return
+  end
   local sep = message:find(";", 1, true) and ";" or "|"
-  local proto, kind, ymd, a, b, pattern, remoteVer = strsplit(sep, message)
+  local proto, kind, oldYmd, a, b, oldPattern, remoteVer = strsplit(sep, message)
+  proto = tostring(proto or ""):match("^%s*(1)")
   if proto ~= "1" then
-    RememberStatus(who .. " sent an unknown addon message.")
+    RememberStatus(who .. " sent an unknown addon message: " .. message:gsub("|", "/"):sub(1, 40))
     return
   end
   if kind == "V" then
-    Leyword.NoteRemoteVersion(ymd)
-    RememberStatus(who .. " is on " .. tostring(ymd))
+    Leyword.NoteRemoteVersion(oldYmd)
+    RememberStatus(who .. " is on " .. tostring(oldYmd))
     return
   end
-  if type(ymd) ~= "string" or not ymd:match("^%d%d%d%d%d%d%d%d$") then
+  if type(oldYmd) ~= "string" or not oldYmd:match("^%d%d%d%d%d%d%d%d$") then
     RememberStatus(who .. " sent a message with no date.")
     return
   end
   if kind == "Q" then
     Leyword.NoteRemoteVersion(a)
     RememberStatus(who .. " asked for scores, but sent none.")
-    ReplyTo(sender, ymd)
+    ReplyTo(sender, oldYmd)
   elseif kind == "R" then
     Leyword.NoteRemoteVersion(remoteVer)
-    StoreResult(sender, ymd, a, b, pattern)
+    StoreResult(sender, oldYmd, a, b, oldPattern)
   else
     RememberStatus(who .. " sent " .. tostring(kind))
   end
@@ -785,8 +791,15 @@ function Leyword.PingDebug()
     print("|cffd4a85aLeyword ping|r register " .. tostring(C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)))
   end
   local msg = "1;V;" .. Leyword.AddonVersion()
+  local fullName = UnitFullName("player")
+  local unitName = UnitName("player")
+  print("|cffd4a85aLeyword ping|r UnitName=[" .. tostring(unitName) .. "] UnitFullName=[" .. tostring(fullName) .. "]")
   report("GUILD", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "GUILD"))
-  report("WHISPER self", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "WHISPER", UnitName("player")))
+  if type(fullName) == "string" and fullName ~= "" and not fullName:find(" ", 1, true) then
+    report("WHISPER self", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "WHISPER", fullName))
+  else
+    print("|cffd4a85aLeyword ping|r skipped self whisper. A two-word name was being cut to the first word.")
+  end
   local id = GetChannelName and GetChannelName("leyword")
   if type(id) == "number" and id > 0 then
     report("CHANNEL", pcall(C_ChatInfo.SendAddonMessage, PREFIX, msg, "CHANNEL", id))
